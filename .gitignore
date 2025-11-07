@@ -1,0 +1,83 @@
+# ============================================
+# ✅ StatWoX .gitignore
+# ============================================
+
+# Python
+__pycache__/
+*/__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+.env/
+env/
+# Node
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+*.log
+.pnpm-store/
+
+# Terraform
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/lambda.zip
+terraform.tfstate
+terraform.tfstate.backup
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*.tfvars
+*.tfvars.json
+
+# 3DevHax Backup System Files
+.JugaadBKP/
+.bkp/
+*.3dev
+*.rehydrated
+*.AIO_rehydrated
+*.bak
+*.backup
+*.old
+*.orig
+*.retry
+
+# Temp / Trash
+tmp/
+temp/
+.trash/
+.cache/
+*.tmp
+*.bak
+*.swp
+*.swo
+*.pyc
+
+# Credentials / Sensitive Files
+*.pem
+*.key
+*.crt
+*.csr
+*.env
+.env.*
+service-account.json
+secret.json
+creds.json
+config.json
+
+# OS Junk
+.DS_Store
+Thumbs.db
+EOF
+
+# Lambda Bundles 
+backend/node_modules/
+backend/*.zip
+
+# AWS / Auth 
+.aws/
+.credentials/
+.sso/
