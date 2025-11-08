@@ -10,6 +10,7 @@ output "site_bucket" {
   value = aws_s3_bucket.frontend.bucket
 }
 
-output "site_website" {
-  value = "http://${aws_s3_bucket_website_configuration.frontend.website_endpoint}"
+output "site_url" {
+  description = "HTTPS CloudFront domain for the StatWoX frontend"
+  value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
 }

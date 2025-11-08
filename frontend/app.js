@@ -4,7 +4,61 @@ const successSound = document.getElementById('successSound');
 function playClick(){ try{ clickSound.currentTime=0; clickSound.play(); }catch(e){} }
 function playSuccess(){ try{ successSound.currentTime=0; successSound.play(); }catch(e){} }
 
-// --- QUESTIONS (exact content preserved) ---
+// --- Add Language Selection on Page Load ---
+let currentLang = localStorage.getItem('lang') || null;
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (!currentLang) {
+    document.getElementById('languageScreen').classList.remove('hidden');
+    document.getElementById('langEn').addEventListener('click', () => setLanguage('en'));
+    document.getElementById('langHi').addEventListener('click', () => setLanguage('hi'));
+  } else {
+    startApp();
+  }
+});
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem('lang', lang);
+  document.getElementById('languageScreen').classList.add('hidden');
+  startApp();
+}
+
+function startApp() {
+  renderWelcomeScreen();
+}
+
+// --- Welcome Screen ---
+function renderWelcomeScreen() {
+  const card = document.getElementById('card');
+  const thankyou = document.getElementById('thankyou');
+  card.classList.add('hidden');
+  thankyou.classList.add('hidden');
+
+  const main = document.querySelector('main');
+  const wrapper = document.createElement('div');
+  wrapper.id = 'welcomeScreen';
+  wrapper.className = 'text-center space-y-4';
+  wrapper.innerHTML = `
+    <h2 class="text-2xl font-bold text-indigo-300">🌟 ${currentLang === 'hi' ? 'हमारे डिजिटल समुदाय में आपका स्वागत है!' : 'Welcome to Our Digital Community Exploration!'}</h2>
+    <p class="text-gray-300 leading-relaxed text-sm sm:text-base">
+      ${currentLang === 'hi' 
+        ? 'संस्कृतियों, समुदायों और विभिन्न दृष्टिकोणों के बीच — आपकी आवाज़ महत्वपूर्ण है। हम एक ऐसा मंच बना रहे हैं जहाँ हर व्यक्ति सुना और महत्व दिया जाता है। अपने सच्चे अनुभव साझा करें — अच्छे, चुनौतीपूर्ण और उनके बीच के सभी। आपकी कहानियाँ एक बेहतर डिजिटल दुनिया बनाएंगी।' 
+        : 'Thank you for joining us in this important conversation about how we connect in today\'s virtual social spaces. Across cultures, communities, and diverse perspectives — your voice matters. We\'re building more than just a platform; we\'re creating a space where every individual feels heard, valued, and truly part of something meaningful. Share your authentic experiences with us — the good, the challenging, and everything in between. Your stories will shape a better digital world for everyone.'}
+    </p>
+    <button id="beginSurvey" class="mt-6 px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 transition text-white font-semibold">Begin</button>
+  `;
+  main.appendChild(wrapper);
+
+  document.getElementById('beginSurvey').addEventListener('click', () => {
+    playClick();
+    wrapper.remove();
+    document.getElementById('card').classList.remove('hidden');
+    render();
+  });
+}
+
+// --- QUESTIONS  ---
 const questions = [
   { id: 'FullName', en: 'Full Name', hi: 'अपना पूरा नाम दर्ज करें', type: 'text' },
   { id: 'Email', en: 'Email Address', hi: 'अपना ईमेल पता दर्ज करें', type: 'text' },

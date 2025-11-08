@@ -3,5 +3,5 @@ resource "random_id" "rand" {
 }
 
 locals {
-  bucket_name = "${var.project}-survey-frontend-${random_id.rand.hex}"
+  bucket_name = "${var.project}-survey-${random_id.rand.hex}"
 }

@@ -1,11 +1,8 @@
 # ===========================
-# ✅ Terraform Variables
+# Terraform Variables
 # ===========================
-# These variables DO NOT contain defaults for sensitive data.
-# Values MUST come from environment variables like:
-#   export TF_VAR_sheet_id="xxx"
-#   export TF_VAR_google_service_creds="json"
-#
+# No Variable with sensitive data
+# Values gets fetched from Enviroment Variables
 # direnv loads them automatically from .envrc
 
 variable "aws_region" {
@@ -16,7 +13,7 @@ variable "aws_region" {
 
 variable "project" {
   type        = string
-  default     = "statwox"
+  default     = "StatWoX"
   description = "Project name prefix for resources"
 }
 
