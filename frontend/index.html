@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Digital Opinion Trend Survey</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-primary: radial-gradient(circle at 25% 30%, #151a28, #06070c 80%);
+    --accent: #6366f1;
+    --accent2: #a855f7;
+    --text: #f3f4f6;
+    --card-glow: 0 0 60px rgba(99,102,241,0.2);
+  }
+  html, body {
+    margin: 0; padding: 0; height: 100%; font-family: 'Poppins', sans-serif; background: var(--bg-primary); color: var(--text);
+    overflow-x: hidden; scroll-behavior: smooth;
+  }
+  .glass {
+    background: rgba(255,255,255,0.05); backdrop-filter: blur(20px) saturate(1.8);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 1.25rem;
+    box-shadow: var(--card-glow);
+    transition: all 0.5s ease;
+  }
+  .glass:hover { box-shadow: 0 0 80px rgba(99,102,241,0.35); }
+  .option-btn {
+    position: relative; display: block; width: 100%; padding: 1rem 1.2rem; border-radius: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03);
+    color: var(--text); font-weight: 500; overflow: hidden; transition: all 0.4s ease;
+  }
+  .option-btn::before {
+    content: ''; position: absolute; inset: 0; background: radial-gradient(circle at var(--x,50%) var(--y,50%), rgba(99,102,241,0.15), transparent 70%);
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .option-btn:hover::before { opacity: 1; }
+  .option-btn:hover { transform: translateY(-3px) scale(1.02); background: rgba(99,102,241,0.08); }
+  .option-btn.selected {
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: white; border: 1px solid rgba(255,255,255,0.2);
+    box-shadow: 0 6px 30px rgba(99,102,241,0.45);
+  }
+  .question-transition { animation: fadeSlide 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+  @keyframes fadeSlide { 0% { opacity: 0; transform: translateY(25px) scale(0.97);} 100% { opacity: 1; transform: translateY(0) scale(1);} }
+  .progress-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,0.08); overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #a855f7); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+  textarea {
+    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem;
+    padding: 1rem; color: var(--text); resize: none; transition: box-shadow 0.3s ease;
+  }
+  textarea:focus { outline: none; box-shadow: 0 0 20px rgba(99,102,241,0.4); border-color: rgba(99,102,241,0.4); }
+  #bg-animation {
+    position: fixed; inset: 0; z-index: -2;
+    background: radial-gradient(circle at 15% 20%, #1b2033, #060810 90%);
+    animation: bgMove 18s infinite alternate ease-in-out;
+  }
+  @keyframes bgMove { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
+  .floating-dots::before, .floating-dots::after {
+    content:''; position:absolute; border-radius:50%; filter: blur(40px); opacity:0.4; z-index:-1;
+  }
+  .floating-dots::before { width:250px; height:250px; top:-80px; right:-100px; background:#6366f1; animation: float 8s ease-in-out infinite alternate; }
+  .floating-dots::after { width:200px; height:200px; bottom:-100px; left:-100px; background:#a855f7; animation: float 10s ease-in-out infinite alternate-reverse; }
+  @keyframes float { 0% { transform: translateY(0) scale(1); } 100% { transform: translateY(-30px) scale(1.1); } }
+  .visually-hidden { position:absolute!important; height:1px;width:1px;overflow:hidden;clip:rect(1px,1px,1px,1px);white-space:nowrap;}
+</style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 relative overflow-hidden">
+  <div id="bg-animation"></div>
+  <main class="w-full max-w-2xl glass p-6 sm:p-8 question-transition floating-dots" role="main">
+    <header class="text-center mb-6 animate-pulse">
+      <h1 class="text-3xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-fuchsia-400 bg-clip-text text-transparent drop-shadow-lg">Digital Opinion Trend Survey</h1>
+      <p class="text-sm text-gray-300 mt-2 tracking-wide">Explore how people engage, express, and connect online</p>
+    </header>
+
+    <section id="card">
+      <div class="progress-bar mb-4"><div id="progressFill" class="progress-fill" style="width:4%"></div></div>
+      <div id="content" class="min-h-[260px] transition-all duration-700 ease-in-out">
+        <h2 id="title" class="text-xl font-semibold mb-2 text-indigo-100"></h2>
+        <p id="subtitle" class="text-sm text-indigo-300/80 mb-4 italic"></p>
+        <div id="options" class="space-y-3"></div>
+      </div>
+      <div class="mt-5 flex justify-between items-center">
+        <button id="backBtn" class="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 transition hidden">← Back</button>
+        <div class="flex gap-2">
+          <button id="skipBtn" class="px-4 py-2 rounded-md bg-white/10 hover:bg-white/20 transition">Skip</button>
+          <button id="nextBtn" class="px-4 py-2 rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 transition">Next →</button>
+        </div>
+      </div>
+      <div id="status" class="text-xs mt-3 text-indigo-300" aria-live="polite"></div>
+    </section>
+
+    <section id="thankyou" class="hidden mt-6 text-center" aria-hidden="true">
+      <h3 class="text-2xl font-semibold text-indigo-300 drop-shadow-lg">🎉 Thank you!</h3>
+      <p class="text-sm text-gray-300 mt-2">Your response has been recorded successfully.</p>
+      <button id="shareBtn" class="mt-4 px-4 py-2 rounded-lg bg-gradient-to-r from-indigo-500 to-fuchsia-600 hover:scale-105 transition-all shadow-lg">Share this Survey</button>
+    </section>
+  </main>
+
+  <audio id="clickSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_4be6db7b7a.mp3" preload="auto" class="visually-hidden"></audio>
+  <audio id="successSound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_b1f5f51976.mp3" preload="auto" class="visually-hidden"></audio>
+
+  <!-- Terraform will upload a config.js with window.STATWOX_API_URL set -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
