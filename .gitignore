@@ -78,6 +78,7 @@ backend/node_modules/
 backend/*.zip
 
 # AWS / Auth 
+aws/
 .aws/
 .credentials/
-.sso/
+.sso/.envrc
