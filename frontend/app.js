@@ -260,3 +260,50 @@ backBtn && backBtn.addEventListener('click', prevQuestion);
 nextBtn && nextBtn.addEventListener('click', nextQuestion);
 skipBtn && skipBtn.addEventListener('click', skipQuestion);
 
+
+// === Dynamic 10-language selector (auto-generated grid) ===
+window.addEventListener("DOMContentLoaded", () => {
+  const langContainer = document.querySelector("#languageScreen .flex");
+  if (langContainer) {
+    langContainer.innerHTML = "";
+    const languages = {
+      en: "English",
+      hi: "हिंदी (Hindi)",
+      bn: "বাংলা (Bengali)",
+      mr: "मराठी (Marathi)",
+      te: "తెలుగు (Telugu)",
+      ta: "தமிழ் (Tamil)",
+      gu: "ગુજરાતી (Gujarati)",
+      ur: "اردو (Urdu)",
+      kn: "ಕನ್ನಡ (Kannada)",
+      or: "ଓଡ଼ିଆ (Odia)",
+      ml: "മലയാളം (Malayalam)"
+    };
+
+    const colors = [
+      "from-indigo-600 to-purple-600",
+      "from-fuchsia-600 to-pink-600",
+      "from-blue-600 to-cyan-600",
+      "from-green-600 to-emerald-600",
+      "from-orange-500 to-amber-500",
+      "from-rose-500 to-pink-600",
+      "from-teal-600 to-cyan-600",
+      "from-sky-600 to-blue-700",
+      "from-purple-600 to-indigo-700",
+      "from-yellow-500 to-orange-600"
+    ];
+
+    Object.entries(languages).forEach(([code, label], i) => {
+      const btn = document.createElement("button");
+      btn.className =
+        "px-4 py-3 sm:px-5 sm:py-3 rounded-xl text-white font-semibold shadow-md hover:opacity-90 transition transform hover:scale-105 bg-gradient-to-r";
+      btn.classList.add(...colors[i % colors.length].split(" "));
+      btn.textContent = label;
+      btn.title = `Select ${label.replace(/\(.+\)/, "")}`; // tooltip shows English fallback
+      btn.onclick = () => setLanguage(code);
+      langContainer.appendChild(btn);
+    });
+
+    langContainer.className = "grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4";
+  }
+});
