@@ -11,6 +11,7 @@ __pycache__/
 venv/
 .env/
 env/
+
 # Node
 node_modules/
 npm-debug.log
@@ -67,6 +68,9 @@ service-account.json
 secret.json
 creds.json
 config.json
+google-service-account.json
+*service-account*.json
+.envrc
 
 # OS Junk
 .DS_Store
