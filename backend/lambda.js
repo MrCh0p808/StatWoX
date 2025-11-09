@@ -5,6 +5,7 @@ const { google } = require('googleapis');
 // Canonical order to match your sheet columns (Timestamp first)
 const KEY_ORDER = [
   'Timestamp',
+  'SessionID',
   'FullName','Email','Age',
   'Q1','Q2','Q3','Q4','Q5',
   'Q6','Q7','Q8','Q9','Q10',
@@ -53,8 +54,7 @@ exports.handler = async (event) => {
     const sheets = google.sheets({ version: 'v4', auth: client });
 
     // 1) Ensure header row is present & canonical
-    const headerRow = ['Timestamp',
-      'Full name / पूरा नाम','Email address / ईमेल पता','Age / आयु',
+    const headerRow = ['Timestamp','SessionID', 'Full name / पूरा नाम','Email address / ईमेल पता','Age / आयु',
       'How frequently do you actively participate (post/comment/vote) in online communities? / आप कितनी बार सक्रिय रूप से भाग लेते हैं?',
       'What motivates you MOST to share your opinion or engage in online discussions? / आपको क्या प्रेरित करता है?',
       'What type of content most often makes you stop scrolling and participate? / किस प्रकार की सामग्री आपको रोकती है?',
@@ -99,26 +99,65 @@ exports.handler = async (event) => {
       });
     }
 
-    // Duplicate email check (if provided)
-    const emailIdx = KEY_ORDER.indexOf('Email'); // 2
-    let emailVal = (body['Email'] || '').toString().trim().toLowerCase();
-    if (emailVal) {
-      const emailColRange = `${SHEET_NAME}!${String.fromCharCode(65 + emailIdx)}2:${String.fromCharCode(65 + emailIdx)}`;
-      const emailCol = await sheets.spreadsheets.values.get({
-        spreadsheetId: SHEET_ID,
-        range: emailColRange
-      }).catch(() => ({ data: { values: [] } }));
-      const flat = (emailCol.data.values || []).flat().map(s => (s || '').toString().trim().toLowerCase());
-      if (flat.includes(emailVal)) {
-        return {
-          statusCode: 200,
-          headers: corsHeaders(),
-          body: JSON.stringify({ success: false, message: 'Duplicate email detected. Only one response per email allowed.' })
-        };
-      }
-    }
+    
+// SessionID / Upsert logic (search by SessionID first, fallback to Email).
+const sessionId = (body['SessionID'] || '').toString().trim();
+let foundRowIndex = -1;
 
-    // Build row in canonical order
+// If sessionId provided, try to find matching row in column B (B2:B)
+if (sessionId) {
+  const sessColRange = `${SHEET_NAME}!B2:B`;
+  const sessCol = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: sessColRange
+  }).catch(() => ({ data: { values: [] } }));
+  const sessFlat = (sessCol.data.values || []).flat().map(s => (s || '').toString().trim());
+  const foundSessIdx = sessFlat.indexOf(sessionId);
+  if (foundSessIdx >= 0) {
+    foundRowIndex = foundSessIdx + 2; // row number in sheet
+  }
+}
+
+// Fallback: if no session match, try to find by Email (so returning users who cleared localStorage can resume)
+const emailIdx = KEY_ORDER.indexOf('Email'); // index in KEY_ORDER
+let emailVal = (body['Email'] || '').toString().trim().toLowerCase();
+if (foundRowIndex === -1 && emailVal) {
+  const emailColRange = `${SHEET_NAME}!${String.fromCharCode(65 + emailIdx)}2:${String.fromCharCode(65 + emailIdx)}`;
+  const emailCol = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID,
+    range: emailColRange
+  }).catch(() => ({ data: { values: [] } }));
+  const flat = (emailCol.data.values || []).flat().map(s => (s || '').toString().trim().toLowerCase());
+  const foundEmailIdx = flat.indexOf(emailVal);
+  if (foundEmailIdx >= 0) {
+    foundRowIndex = foundEmailIdx + 2;
+  }
+}
+
+// If we have foundRowIndex, perform an update for that precise row (Upsert behavior).
+if (foundRowIndex !== -1) {
+  // Build row mapping (Timestamp will be overwritten here with new timestamp)
+  const rowToWrite = KEY_ORDER.map(k => {
+    if (k === 'Timestamp') return new Date().toISOString();
+    return normalizeValue(body[k]);
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: SHEET_ID,
+    range: `${SHEET_NAME}!A${foundRowIndex}:Z${foundRowIndex}`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [rowToWrite] }
+  });
+
+  return {
+    statusCode: 200,
+    headers: corsHeaders(),
+    body: JSON.stringify({ success: true, message: '✅ धन्यवाद! Your response has been recorded (updated).', row: foundRowIndex })
+  };
+}
+
+// If no existing session/email found, continue to append as new (we'll reach the build row + append logic)
+// Build row in canonical order
     const row = KEY_ORDER.map(k => {
       if (k === 'Timestamp') return new Date().toISOString();
       return normalizeValue(body[k]);

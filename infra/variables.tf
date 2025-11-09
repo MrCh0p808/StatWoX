@@ -13,7 +13,7 @@ variable "aws_region" {
 
 variable "project" {
   type        = string
-  default     = "StatWoX"
+  default     = "statwox"
   description = "Project name prefix for resources"
 }
 
