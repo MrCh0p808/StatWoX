@@ -35,6 +35,7 @@ override.tf.json
 *.tfvars.json
 
 # 3DevHax Backup System Files
+JugaadBKP_3DevHax.py
 .JugaadBKP/
 .bkp/
 *.3dev
