@@ -38,6 +38,7 @@ override.tf.json
 JugaadBKP_3DevHax.py
 .JugaadBKP/
 .bkp/
+backups/
 *.3dev
 *.rehydrated
 *.AIO_rehydrated
