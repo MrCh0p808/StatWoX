@@ -68,8 +68,8 @@ exports.handler = async (event) => {
     credentials: googleCreds,
     scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
-    
-const client = await auth.getClient();
+    const client = await auth.getClient();
+    const sheets = google.sheets({ version: 'v4', auth: client });
 
     // 1) Ensure header row is present & canonical
     const headerRow = ['Timestamp','SessionID', 'Full name / पूरा नाम','Email address / ईमेल पता','Age / आयु',
