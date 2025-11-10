@@ -2,6 +2,23 @@
 
 const { google } = require('googleapis');
 
+// --- AWS SSM Support (for secure Google credentials) ---
+const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm');
+const ssm = new SSMClient({ region: process.env.AWS_REGION || 'us-east-1' });
+
+async function getGoogleCredsFromSSM() {
+  try {
+    const paramName = process.env.GOOGLE_CREDS_SSM_PARAM || '/statwox/google-service-creds';
+    const cmd = new GetParameterCommand({ Name: paramName, WithDecryption: true });
+    const resp = await ssm.send(cmd);
+    return JSON.parse(resp.Parameter.Value);
+  } catch (err) {
+    console.error("❌ Failed to fetch from SSM:", err.message);
+    console.log("⚠️ Falling back to environment variable GOOGLE_SERVICE_CREDS");
+    return JSON.parse(process.env.GOOGLE_SERVICE_CREDS || '{}');
+  }
+}
+
 // Canonical order to match your sheet columns (Timestamp first)
 const KEY_ORDER = [
   'Timestamp',
@@ -46,12 +63,13 @@ exports.handler = async (event) => {
     if (!body || typeof body !== 'object') throw new Error('Invalid payload');
 
     // Auth with Google
+    const googleCreds = await getGoogleCredsFromSSM();
     const auth = new google.auth.GoogleAuth({
-      credentials: JSON.parse(process.env.GOOGLE_SERVICE_CREDS || '{}'),
-      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    credentials: googleCreds,
+    scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
-    const client = await auth.getClient();
-    const sheets = google.sheets({ version: 'v4', auth: client });
+    
+const client = await auth.getClient();
 
     // 1) Ensure header row is present & canonical
     const headerRow = ['Timestamp','SessionID', 'Full name / पूरा नाम','Email address / ईमेल पता','Age / आयु',

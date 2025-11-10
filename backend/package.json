@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "commonjs",
   "dependencies": {
+    "@aws-sdk/client-ssm": "^3.927.0",
     "googleapis": "^133.0.0"
   }
 }
-

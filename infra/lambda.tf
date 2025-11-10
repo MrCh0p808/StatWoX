@@ -33,7 +33,7 @@ resource "aws_lambda_function" "submit" {
   environment {
     variables = {
       SHEET_ID             = var.sheet_id
-      GOOGLE_SERVICE_CREDS = var.google_service_creds
+       GOOGLE_CREDS_SSM_PARAM    = "/statwox/google-service-creds"
     }
   }
 
