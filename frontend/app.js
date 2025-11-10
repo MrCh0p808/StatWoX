@@ -307,3 +307,251 @@ window.addEventListener("DOMContentLoaded", () => {
     langContainer.className = "grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4";
   }
 });
+
+// === Auto-Localized Labels + Language-Change Toggle ===
+
+// localized labels dictionary (pure native scripts)
+window.LANG_LABELS_NATIVE = {
+  en: "English",
+  hi: "हिंदी",
+  bn: "বাংলা",
+  mr: "मराठी",
+  te: "తెలుగు",
+  ta: "தமிழ்",
+  gu: "ગુજરાતી",
+  ur: "اردو",
+  kn: "ಕನ್ನಡ",
+  or: "ଓଡ଼ିଆ",
+  ml: "മലയാളം"
+};
+
+// rebuild buttons using native labels
+window.addEventListener("DOMContentLoaded", () => {
+  const langContainer = document.querySelector("#languageScreen .flex");
+  if (langContainer && window.LANG_LABELS_NATIVE) {
+    langContainer.innerHTML = "";
+    const colors = [
+      "from-indigo-600 to-purple-600",
+      "from-fuchsia-600 to-pink-600",
+      "from-blue-600 to-cyan-600",
+      "from-green-600 to-emerald-600",
+      "from-orange-500 to-amber-500",
+      "from-rose-500 to-pink-600",
+      "from-teal-600 to-cyan-600",
+      "from-sky-600 to-blue-700",
+      "from-purple-600 to-indigo-700",
+      "from-yellow-500 to-orange-600"
+    ];
+    Object.entries(window.LANG_LABELS_NATIVE).forEach(([code, label], i) => {
+      const btn = document.createElement("button");
+      btn.className =
+        "px-4 py-3 sm:px-5 sm:py-3 rounded-xl text-white font-semibold shadow-md hover:opacity-90 transition transform hover:scale-105 bg-gradient-to-r";
+      btn.classList.add(...colors[i % colors.length].split(" "));
+      btn.textContent = label;
+      btn.title = `Select ${label}`;
+      btn.onclick = () => setLanguage(code);
+      langContainer.appendChild(btn);
+    });
+    langContainer.className = "grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4";
+  }
+});
+
+// --- Add floating 🌐 Change Language toggle ---
+window.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.createElement("button");
+  toggle.id = "langToggle";
+  toggle.innerHTML = "🌐 Change Language";
+  toggle.className =
+    "fixed top-4 right-4 z-50 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-xs sm:text-sm text-indigo-200 border border-white/10 shadow-md backdrop-blur transition";
+  toggle.onclick = () => {
+    playClick();
+    localStorage.removeItem("lang");
+    document.getElementById("languageScreen").classList.remove("hidden");
+  };
+  document.body.appendChild(toggle);
+});
+
+// === PATCH BLOCK: StatWoX Final UX + Validation Enhancements ===
+
+// 🌐 Fade-in toggle control (appears after Welcome Screen only)
+window.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("langToggle");
+  if (toggle) {
+    toggle.style.opacity = "0";
+    toggle.style.transition = "opacity 1s ease-in-out";
+    // fade-in only after welcome screen hidden
+    const observer = new MutationObserver(() => {
+      const welcome = document.getElementById("welcomeScreen");
+      if (!welcome || welcome.classList.contains("hidden")) {
+        setTimeout(() => { toggle.style.opacity = "1"; }, 800);
+      } else {
+        toggle.style.opacity = "0";
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+});
+
+// === Enhanced Validation: Name + Email + Skip logic ===
+function validateRequiredInput(q, val) {
+  if (q.id === "FullName") {
+    if (!val || val.trim().length < 3 || /^\d+$/.test(val.trim()))
+      return "Please enter a valid name (min 3 letters).";
+  }
+  if (q.id === "Email") {
+    const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!regex.test(val.trim()))
+      return "Please enter a valid email address.";
+  }
+  return "";
+}
+
+// Override nextQuestion and skipQuestion validation
+const _nextQuestion = nextQuestion;
+nextQuestion = function() {
+  const q = questions[idx];
+  const val = responses[q.id];
+  if (REQUIRED_IDS.includes(q.id)) {
+    const err = validateRequiredInput(q, val);
+    if (err) {
+      statusEl.textContent = err;
+      setTimeout(() => (statusEl.textContent = ""), 3000);
+      return;
+    }
+  }
+  _nextQuestion();
+};
+
+const _skipQuestion = skipQuestion;
+skipQuestion = function() {
+  const q = questions[idx];
+  // disable skip for first 3 (required)
+  if (REQUIRED_IDS.includes(q.id)) {
+    const val = responses[q.id];
+    const err = validateRequiredInput(q, val);
+    if (err) {
+      statusEl.textContent = err;
+      setTimeout(() => (statusEl.textContent = ""), 3000);
+      return;
+    }
+  }
+  _skipQuestion();
+};
+
+// === Dual Language Rendering (Questions + Options) ===
+const _render = render;
+render = function() {
+  const q = questions[idx];
+  if (!q) return;
+  const primaryLang = currentLang;
+  const secondaryLang = currentLang === "en" ? "hi" : "en";
+  titleEl.innerHTML = `
+    <div class="text-xl font-semibold mb-1">${q[primaryLang] || q.en}</div>
+    <div class="text-sm text-gray-400 italic">${q[secondaryLang] || ""}</div>
+  `;
+  subtitleEl.textContent = "";
+  optionsEl.innerHTML = "";
+
+  const isMulti = q.type === "mcq" && MULTI_SELECT_IDS.includes(q.id);
+
+  if (q.type === "mcq") {
+    q.opts.forEach(opt => {
+      const [primary, secondary] = (opt.split(" / ") || [opt, ""]);
+      const shownPrimary = currentLang === "en" ? primary : secondary || primary;
+      const shownSecondary = currentLang === "en" ? secondary : primary || "";
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.innerHTML = `
+        <div class="text-base">${shownPrimary}</div>
+        <div class="text-xs text-indigo-300/80">${shownSecondary}</div>
+      `;
+      const prev = responses[q.id];
+      if (isMulti && Array.isArray(prev) && prev.includes(opt)) btn.classList.add("selected");
+      else if (prev === opt) btn.classList.add("selected");
+
+      btn.onclick = () => {
+        playClick();
+        if (isMulti) {
+          responses[q.id] = responses[q.id] || [];
+          const arr = responses[q.id];
+          const i = arr.indexOf(opt);
+          if (i >= 0) {
+            arr.splice(i, 1);
+            btn.classList.remove("selected");
+          } else {
+            arr.push(opt);
+            btn.classList.add("selected");
+          }
+        } else {
+          responses[q.id] = opt;
+          optionsEl.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          setTimeout(() => { nextQuestion(); }, 220);
+        }
+      };
+      optionsEl.appendChild(btn);
+    });
+    nextBtn.style.display = isMulti ? "inline-block" : "none";
+  } else {
+    const ta = document.createElement("textarea");
+    ta.id = "textResp";
+    ta.rows = 5;
+    ta.placeholder = currentLang === "hi"
+      ? "अपना उत्तर यहाँ लिखें / Type your answer here"
+      : "Type your answer here / अपना उत्तर यहाँ लिखें";
+    ta.value = responses[q.id] || "";
+    ta.addEventListener("input", () => { responses[q.id] = ta.value; });
+    optionsEl.appendChild(ta);
+    nextBtn.style.display = "inline-block";
+  }
+
+  progressFill.style.width = `${Math.round((idx / total) * 100)}%`;
+  backBtn.style.display = idx === 0 ? "none" : "block";
+  statusEl.textContent = "";
+};
+
+// === Welcome Screen Dual Language Message ===
+const _renderWelcomeScreen = renderWelcomeScreen;
+renderWelcomeScreen = function() {
+  const main = document.querySelector("main");
+  const card = document.getElementById("card");
+  const thankyou = document.getElementById("thankyou");
+  card.classList.add("hidden");
+  thankyou.classList.add("hidden");
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "welcomeScreen";
+  wrapper.className = "text-center space-y-4";
+  const hiMsg =
+    "संस्कृतियों, समुदायों और विभिन्न दृष्टिकोणों के बीच — आपकी आवाज़ महत्वपूर्ण है। हम एक ऐसा मंच बना रहे हैं जहाँ हर व्यक्ति सुना और महत्व दिया जाता है। अपने सच्चे अनुभव साझा करें — अच्छे, चुनौतीपूर्ण और उनके बीच के सभी। आपकी कहानियाँ एक बेहतर डिजिटल दुनिया बनाएंगी।";
+  const enMsg =
+    "Across cultures, communities, and diverse perspectives — your voice matters. We're creating a space where every individual feels heard, valued, and part of something meaningful.";
+  const primary = currentLang === "hi" ? hiMsg : enMsg;
+  const secondary = currentLang === "hi" ? enMsg : hiMsg;
+  wrapper.innerHTML = `
+    <h2 class="text-2xl font-bold text-indigo-300">🌟 ${
+      currentLang === "hi"
+        ? "हमारे डिजिटल समुदाय में आपका स्वागत है!"
+        : "Welcome to Our Digital Community Exploration!"
+    }</h2>
+    <p class="text-gray-300 leading-relaxed text-sm sm:text-base mb-4">
+      ${primary}
+    </p>
+    <p class="text-gray-400 text-xs sm:text-sm italic">
+      ${secondary}
+    </p>
+    <div class="mt-6">
+      <button id="beginSurvey" class="px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 transition text-white font-semibold">
+        ${currentLang === "hi" ? "सर्वे शुरू करें" : "Start Survey"}
+      </button>
+    </div>
+  `;
+  main.appendChild(wrapper);
+
+  document.getElementById("beginSurvey").addEventListener("click", () => {
+    playClick();
+    wrapper.classList.add("hidden");
+    document.getElementById("card").classList.remove("hidden");
+    render();
+  });
+};
