@@ -21,9 +21,9 @@ yarn-error.log
 .pnpm-store/
 
 # Terraform
-infra/.terraform/
-infra/.terraform.lock.hcl
-infra/lambda.zip
+.terraform/
+.terraform.lock.hcl
+*.zip
 terraform.tfstate
 terraform.tfstate.backup
 *.tfplan
@@ -80,8 +80,8 @@ Thumbs.db
 EOF
 
 # Lambda Bundles 
-backend/node_modules/
-backend/*.zip
+node_modules/
+*.zip
 
 # AWS / Auth 
 aws/
