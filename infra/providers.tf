@@ -10,3 +10,13 @@ terraform {
 provider "aws" {
   region = var.aws_region
 }
+
+default_tags {
+    tags = {
+      Project     = var.project
+      Environment = "prod"
+      ManagedBy   = "Terraform"
+      Owner       = "v3nd377a_7ecorp"
+      CostCenter  = "FreeTier"
+    }
+  }
