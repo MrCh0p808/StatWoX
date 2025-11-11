@@ -3,19 +3,36 @@
 const { google } = require('googleapis');
 
 // --- AWS SSM Support (for secure Google credentials) ---
+// We pull the Google service-account JSON from AWS SSM (SecureString).
+// This prevents hardcoding secrets in Terraform or code. Lambda IAM policy allows only this path.
 const { SSMClient, GetParameterCommand } = require('@aws-sdk/client-ssm');
 const ssm = new SSMClient({ region: process.env.AWS_REGION || 'us-east-1' });
 
 async function getGoogleCredsFromSSM() {
+  const paramName = process.env.GOOGLE_CREDS_SSM_PARAM || '/statwox/google-service-creds';
+  console.log(`ℹ️ [SSM] Attempting to fetch param: ${paramName} in region ${process.env.AWS_REGION || 'us-east-1'}`);
+
   try {
-    const paramName = process.env.GOOGLE_CREDS_SSM_PARAM || '/statwox/google-service-creds';
     const cmd = new GetParameterCommand({ Name: paramName, WithDecryption: true });
     const resp = await ssm.send(cmd);
+
+    if (!resp?.Parameter) {
+      console.error('❌ [SSM] No Parameter object returned.');
+      throw new Error('Empty or malformed SSM response.');
+    }
+
+    if (!resp.Parameter.Value) {
+      console.error('❌ [SSM] Parameter found but no Value.');
+      throw new Error('Empty parameter value.');
+    }
+
+    console.log('✅ [SSM] Parameter fetched successfully (length only):', resp.Parameter.Value.length);
     return JSON.parse(resp.Parameter.Value);
+
   } catch (err) {
-    console.error("❌ Failed to fetch from SSM:", err.message);
-    console.log("⚠️ Falling back to environment variable GOOGLE_SERVICE_CREDS");
-    return JSON.parse(process.env.GOOGLE_SERVICE_CREDS || '{}');
+    // We log only the message, not the secret, to avoid leaking anything.
+    console.error(`❌ [SSM] Failed to fetch creds: ${err.name || 'Error'} - ${err.message}`);
+    throw new Error('Critical: Unable to load Google credentials from SSM. Check IAM permissions or parameter.');
   }
 }
 
@@ -70,6 +87,7 @@ exports.handler = async (event) => {
     });
     const client = await auth.getClient();
     const sheets = google.sheets({ version: 'v4', auth: client });
+
 
     // 1) Ensure header row is present & canonical
     const headerRow = ['Timestamp','SessionID', 'Full name / पूरा नाम','Email address / ईमेल पता','Age / आयु',

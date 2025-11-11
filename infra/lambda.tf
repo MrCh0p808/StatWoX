@@ -32,10 +32,10 @@ resource "aws_lambda_function" "submit" {
 
   environment {
     variables = {
-      SHEET_ID             = var.sheet_id
-       GOOGLE_CREDS_SSM_PARAM    = "/statwox/google-service-creds"
+      SHEET_ID               = var.sheet_id
+      GOOGLE_CREDS_SSM_PARAM = var.google_creds_ssm_param
     }
   }
-
+  timeout    = 10
   depends_on = [aws_iam_role_policy_attachment.lambda_logs]
 }

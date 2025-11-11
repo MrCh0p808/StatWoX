@@ -22,7 +22,8 @@ variable "sheet_id" {
   description = "Google Sheet ID (provided via TF_VAR_sheet_id env var)"
 }
 
-variable "google_service_creds" {
+variable "google_creds_ssm_param" {
   type        = string
-  description = "Google Service Account JSON (TF_VAR_google_service_creds env var)"
+  default     = "/statwox/google-service-creds"
+  description = "SSM parameter name that contains the Google service-account JSON (SecureString)."
 }
