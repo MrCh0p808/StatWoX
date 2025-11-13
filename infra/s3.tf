@@ -16,9 +16,6 @@ resource "aws_s3_bucket_ownership_controls" "frontend" {
   rule { object_ownership = "BucketOwnerEnforced" }
 }
 
-resource "aws_s3_bucket_website_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
-  index_document { suffix = "index.html" }
   error_document { key = "index.html" }
 }
 

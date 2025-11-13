@@ -4,6 +4,55 @@ const successSound = document.getElementById('successSound');
 function playClick(){ try{ clickSound.currentTime=0; clickSound.play(); }catch(e){} }
 function playSuccess(){ try{ successSound.currentTime=0; successSound.play(); }catch(e){} }
 
+
+// Auto-inserted Phase2: runtime flags & autosave helpers
+window.APP_STARTED = false;
+window._STATWOX_AUTOSAVE = { timer: null, count: 0, pending: false };
+
+// PHASE2 autosave: batch after 3 answers or 20s idle
+function scheduleAutoSave(){
+  try{
+    const s = window._STATWOX_AUTOSAVE;
+    s.count = (s.count || 0) + 1;
+    if(s.count >= 3){
+      clearTimeout(s.timer); s.count = 0; s.pending = false; autoSave();
+      return;
+    }
+    s.pending = true;
+    clearTimeout(s.timer);
+    s.timer = setTimeout(()=>{ s.count = 0; s.pending = false; autoSave(); }, 20000);
+  }catch(e){ console.warn('scheduleAutoSave', e); }
+}
+
+function autoSave(){
+  try{
+    const payload = {};
+    questions.forEach(q => { payload[q.id] = (responses[q.id] === undefined ? '' : responses[q.id]); });
+    payload['Timestamp'] = new Date().toISOString();
+    payload['SessionID'] = responses['SessionID'] || localStorage.getItem('session_id') || '';
+    // mark as autosave for logs; backend will ignore unknown keys
+    payload['autosave'] = true;
+    // fire-and-forget, UI shows toast on success
+    fetch(`${API_URL}/submit`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+      .then(r => r.json())
+      .then(j => {
+         try{ if(j && j.success){ showSavedToast(); } }catch(e){}
+      }).catch(()=>{});
+  }catch(e){ console.warn('autoSave error', e); }
+}
+
+function showSavedToast(){
+  try{
+    let s = document.getElementById('statwox-saved-toast');
+    if(!s){ s = document.createElement('div'); s.id='statwox-saved-toast';
+      s.style.position='fixed'; s.style.right='16px'; s.style.top='16px'; s.style.padding='8px 12px'; s.style.background='rgba(0,0,0,0.6)'; s.style.color='white'; s.style.borderRadius='8px'; s.style.zIndex='9999'; s.textContent='Auto-saved ✔'; document.body.appendChild(s);
+    }
+    s.style.opacity='1';
+    setTimeout(()=>{ try{ s.style.opacity='0'; }catch(e){} }, 1800);
+  }catch(e){}
+}
+
+
 // --- Add Language Selection on Page Load ---
 let currentLang = localStorage.getItem('lang') || null;
 
@@ -21,12 +70,34 @@ function setLanguage(lang) {
   currentLang = lang;
   localStorage.setItem('lang', lang);
   document.getElementById('languageScreen').classList.add('hidden');
-  startApp();
+  // If app already started, re-render current UI without restarting welcome
+  if (window.APP_STARTED) {
+    try { reRenderLanguage(); } catch(e){ console.warn('reRenderLanguage failed', e); startApp(); }
+  } else {
+    startApp();
+  }
+}
+
+
+
+// helper to re-render UI when language changes without restarting
+function reRenderLanguage(){
+  try{
+    // keep current state and re-render question UI in new language
+    render();
+    // If welcome screen visible, ensure texts updated
+    const welcome = document.getElementById('welcomeScreen');
+    if(welcome && !welcome.classList.contains('hidden')) {
+      // update localized labels (if present)
+    }
+  }catch(e){ console.warn('reRenderLanguage error', e); }
 }
 
 function startApp() {
+  try { window.APP_STARTED = true; } catch(e){}
   renderWelcomeScreen();
 }
+
 
 // --- Welcome Screen ---
 function renderWelcomeScreen() {
@@ -115,6 +186,9 @@ const statusEl = document.getElementById('status');
 let idx = 0, responses = {}, total = questions.length;
 
 function render(){
+  // Phase2: disable Skip for first 3 questions
+  try{ skipBtn.disabled = (idx < 3); }catch(e){}
+
   const q = questions[idx];
   if(!q){ statusEl.textContent = 'No question found'; return; }
 
@@ -145,7 +219,7 @@ function render(){
           if(i >= 0){ arr.splice(i,1); btn.classList.remove('selected'); }
           else { arr.push(opt); btn.classList.add('selected'); }
         } else {
-          responses[q.id] = opt;
+          responses[q.id] = opt; try{ scheduleAutoSave(); }catch(e){};
           optionsEl.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
           btn.classList.add('selected');
           setTimeout(()=>{ nextQuestion(); }, 220);
@@ -158,7 +232,7 @@ function render(){
     const ta = document.createElement('textarea');
     ta.id='textResp'; ta.rows=5; ta.placeholder='Type your answer here / अपना उत्तर यहाँ लिखें';
     ta.value = responses[q.id] || '';
-    ta.addEventListener('input', () => { responses[q.id] = ta.value; });
+    ta.addEventListener('input', () => { responses[q.id] = ta.value; try{ scheduleAutoSave(); }catch(e){} });
     optionsEl.appendChild(ta);
     nextBtn.style.display = 'inline-block';
   }
@@ -441,6 +515,195 @@ skipQuestion = function() {
 // === Dual Language Rendering (Questions + Options) ===
 const _render = render;
 render = function() {
+  // Phase2: disable Skip for first 3 questions
+  try{ skipBtn.disabled = (idx < 3); }catch(e){}
+
+  const q = questions[idx];
+  if (!q) return;
+  const primaryLang = currentLang;
+  const secondaryLang = currentLang === "en" ? "hi" : "en";
+  titleEl.innerHTML = `
+    <div class="text-xl font-semibold mb-1">${q[primaryLang] || q.en}</div>
+    <div class="text-sm text-gray-400 italic">${q[secondaryLang] || ""}</div>
+  `;
+  subtitleEl.textContent = "";
+  optionsEl.innerHTML = "";
+
+  const isMulti = q.type === "mcq" && MULTI_SELECT_IDS.includes(q.id);
+
+  if (q.type === "mcq") {
+    q.opts.forEach(opt => {
+      const [primary, secondary] = (opt.split(" / ") || [opt, ""]);
+      const shownPrimary = currentLang === "en" ? primary : secondary || primary;
+      const shownSecondary = currentLang === "en" ? secondary : primary || "";
+      const btn = document.createElement("button");
+      btn.className = "option-btn";
+      btn.innerHTML = `
+        <div class="text-base">${shownPrimary}</div>
+        <div class="text-xs text-indigo-300/80">${shownSecondary}</div>
+      `;
+      const prev = responses[q.id];
+      if (isMulti && Array.isArray(prev) && prev.includes(opt)) btn.classList.add("selected");
+      else if (prev === opt) btn.classList.add("selected");
+
+      btn.onclick = () => {
+        playClick();
+        if (isMulti) {
+          responses[q.id] = responses[q.id] || [];
+          const arr = responses[q.id];
+          const i = arr.indexOf(opt);
+          if (i >= 0) {
+            arr.splice(i, 1);
+            btn.classList.remove("selected");
+          } else {
+            arr.push(opt);
+            btn.classList.add("selected");
+          }
+        } else {
+          responses[q.id] = opt; try{ scheduleAutoSave(); }catch(e){};
+          optionsEl.querySelectorAll(".option-btn").forEach(b => b.classList.remove("selected"));
+          btn.classList.add("selected");
+          setTimeout(() => { nextQuestion(); }, 220);
+        }
+      };
+      optionsEl.appendChild(btn);
+    });
+    nextBtn.style.display = isMulti ? "inline-block" : "none";
+  } else {
+    const ta = document.createElement("textarea");
+    ta.id = "textResp";
+    ta.rows = 5;
+    ta.placeholder = currentLang === "hi"
+      ? "अपना उत्तर यहाँ लिखें / Type your answer here"
+      : "Type your answer here / अपना उत्तर यहाँ लिखें";
+    ta.value = responses[q.id] || "";
+    ta.addEventListener("input", () => { responses[q.id] = ta.value; try{ scheduleAutoSave(); }catch(e){} });
+    optionsEl.appendChild(ta);
+    nextBtn.style.display = "inline-block";
+  }
+
+  progressFill.style.width = `${Math.round((idx / total) * 100)}%`;
+  backBtn.style.display = idx === 0 ? "none" : "block";
+  statusEl.textContent = "";
+};
+
+// === Welcome Screen Dual Language Message ===
+const _renderWelcomeScreen = renderWelcomeScreen;
+renderWelcomeScreen = function() {
+  try{ const _ws = JSON.parse(localStorage.getItem('statwox_welcome_shown') || '{}'); if(_ws && _ws.lang === currentLang){ /* already shown for this lang → skip showing */ render(); return; } }catch(e){}
+  const main = document.querySelector("main");
+  const card = document.getElementById("card");
+  const thankyou = document.getElementById("thankyou");
+  card.classList.add("hidden");
+  thankyou.classList.add("hidden");
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "welcomeScreen";
+  wrapper.className = "text-center space-y-4";
+  const hiMsg =
+    "संस्कृतियों, समुदायों और विभिन्न दृष्टिकोणों के बीच — आपकी आवाज़ महत्वपूर्ण है। हम एक ऐसा मंच बना रहे हैं जहाँ हर व्यक्ति सुना और महत्व दिया जाता है। अपने सच्चे अनुभव साझा करें — अच्छे, चुनौतीपूर्ण और उनके बीच के सभी। आपकी कहानियाँ एक बेहतर डिजिटल दुनिया बनाएंगी।";
+  const enMsg =
+    "Across cultures, communities, and diverse perspectives — your voice matters. We're creating a space where every individual feels heard, valued, and part of something meaningful.";
+  const primary = currentLang === "hi" ? hiMsg : enMsg;
+  const secondary = currentLang === "hi" ? enMsg : hiMsg;
+  wrapper.innerHTML = `
+    <h2 class="text-2xl font-bold text-indigo-300">🌟 ${
+      currentLang === "hi"
+        ? "हमारे डिजिटल समुदाय में आपका स्वागत है!"
+        : "Welcome to Our Digital Community Exploration!"
+    }</h2>
+    <p class="text-gray-300 leading-relaxed text-sm sm:text-base mb-4">
+      ${primary}
+    </p>
+    <p class="text-gray-400 text-xs sm:text-sm italic">
+      ${secondary}
+    </p>
+    <div class="mt-6">
+      <button id="beginSurvey" class="px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 transition text-white font-semibold">
+        ${currentLang === "hi" ? "सर्वे शुरू करें" : "Start Survey"}
+      </button>
+    </div>
+  `;
+  main.appendChild(wrapper);
+
+  document.getElementById("beginSurvey").addEventListener("click", () => {
+    playClick();
+    wrapper.classList.add("hidden");
+    document.getElementById("card").classList.remove("hidden");
+    render();
+  });
+};
+
+// === PATCH BLOCK: StatWoX Final UX + Validation Enhancements ===
+
+// 🌐 Fade-in toggle control (appears after Welcome Screen only)
+window.addEventListener("DOMContentLoaded", () => {
+  const toggle = document.getElementById("langToggle");
+  if (toggle) {
+    toggle.style.opacity = "0";
+    toggle.style.transition = "opacity 1s ease-in-out";
+    // fade-in only after welcome screen hidden
+    const observer = new MutationObserver(() => {
+      const welcome = document.getElementById("welcomeScreen");
+      if (!welcome || welcome.classList.contains("hidden")) {
+        setTimeout(() => { toggle.style.opacity = "1"; }, 800);
+      } else {
+        toggle.style.opacity = "0";
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+});
+
+// === Enhanced Validation: Name + Email + Skip logic ===
+function validateRequiredInput(q, val) {
+  if (q.id === "FullName") {
+    if (!val || val.trim().length < 3 || /^\d+$/.test(val.trim()))
+      return "Please enter a valid name (min 3 letters).";
+  }
+  if (q.id === "Email") {
+    const regex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+    if (!regex.test(val.trim()))
+      return "Please enter a valid email address.";
+  }
+  return "";
+}
+
+// Override nextQuestion and skipQuestion validation
+const _nextQuestion = nextQuestion;
+nextQuestion = function() {
+  const q = questions[idx];
+  const val = responses[q.id];
+  if (REQUIRED_IDS.includes(q.id)) {
+    const err = validateRequiredInput(q, val);
+    if (err) {
+      statusEl.textContent = err;
+      setTimeout(() => (statusEl.textContent = ""), 3000);
+      return;
+    }
+  }
+  _nextQuestion();
+};
+
+const _skipQuestion = skipQuestion;
+skipQuestion = function() {
+  const q = questions[idx];
+  // disable skip for first 3 (required)
+  if (REQUIRED_IDS.includes(q.id)) {
+    const val = responses[q.id];
+    const err = validateRequiredInput(q, val);
+    if (err) {
+      statusEl.textContent = err;
+      setTimeout(() => (statusEl.textContent = ""), 3000);
+      return;
+    }
+  }
+  _skipQuestion();
+};
+
+// === Dual Language Rendering (Questions + Options) ===
+const _render = render;
+render = function() {
   const q = questions[idx];
   if (!q) return;
   const primaryLang = currentLang;
@@ -555,3 +818,83 @@ renderWelcomeScreen = function() {
     render();
   });
 };
+
+// === PATCH: Refine Toggle Visibility + Dual Language Logic ===
+
+// Hide toggle on choose-language screen + fade in only after welcome is gone
+(function() {
+  const toggle = document.getElementById("langToggle");
+  if (!toggle) return; // safety
+
+  const observer = new MutationObserver(() => {
+    const langScreen = document.getElementById("languageScreen");
+    const welcome = document.getElementById("welcomeScreen");
+
+    // hide toggle when language selection is visible
+    if (langScreen && !langScreen.classList.contains("hidden")) {
+      toggle.style.opacity = "0";
+      return;
+    }
+
+    // hide toggle on welcome screen until start clicked
+    if (welcome && !welcome.classList.contains("hidden")) {
+      toggle.style.opacity = "0";
+      return;
+    }
+
+    // after welcome is hidden → fade in
+    setTimeout(() => { toggle.style.opacity = "1"; }, 600);
+  });
+
+  observer.observe(document.body, { childList: true, subtree: true });
+})();
+
+
+// === PATCH: Dual-language helper overwrite ===
+// If lang=en => secondary=Hindi
+// else => secondary=English
+window.getSecondaryLang = function(primary) {
+  return primary === "en" ? "hi" : "en";
+};
+
+// Patch question title rendering (non-destructive override)
+(function() {
+  if (!window._orig_render_question_title) {
+    window._orig_render_question_title = titleEl.innerHTML;
+  }
+
+  const oldRender = render;
+  render = function() {
+    oldRender();
+
+    // After original render updates content, rewrite dual text properly
+    const q = questions[idx];
+    if (!q) return;
+
+    const primaryLang = currentLang;
+    const secondaryLang = getSecondaryLang(primaryLang);
+
+    const primaryText = q[primaryLang] || q.en;
+    const secondaryText = q[secondaryLang] || "";
+
+    titleEl.innerHTML = `
+      <div class="text-xl font-semibold mb-1">${primaryText}</div>
+      <div class="text-sm text-gray-400 italic">${secondaryText}</div>
+    `;
+
+    // Patch options
+    optionsEl.querySelectorAll(".option-btn").forEach((btn, i) => {
+      const opt = q.opts[i];
+      if (!opt) return;
+      const [optEn, optHi] = opt.split(" / ");
+
+      const primaryOpt = primaryLang === "en" ? optEn : optHi || optEn;
+      const secondaryOpt = primaryLang === "en" ? optHi : optEn;
+
+      btn.innerHTML = `
+        <div class="text-base">${primaryOpt}</div>
+        <div class="text-xs text-indigo-300/80 italic">${secondaryOpt || ""}</div>
+      `;
+    });
+  };
+})();

@@ -24,7 +24,7 @@ resource "aws_iam_role_policy" "lambda_ssm_access" {
         "ssm:GetParameters",
         "ssm:GetParameterHistory"
       ],
-Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/statwox/*"
+      Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter/statwox/*"
     }]
   })
 }
