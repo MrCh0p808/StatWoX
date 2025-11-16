@@ -1,7 +1,7 @@
 <div align="center">
 
 <h1><b>StatWoX : Surveys / Forms / Polls</b></h1>
-<h3><b><i>Let The Stat Work Out For Your Descision Making</i></b></h3>
+<h3><b><i>Let The Stat Work Out Your Decision Making</i></b></h3>
 
 <img src="https://img.shields.io/badge/Build-passing-brightgreen" />
 <img src="https://img.shields.io/badge/Version-1.0.0-blue" />
