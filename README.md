@@ -1,33 +1,38 @@
-# **StatWoX**
+<div align="center">
 
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-purple)
-![Last Commit](https://img.shields.io/github/last-commit/yourname/StatWoX)
-![Stars](https://img.shields.io/github/stars/yourname/StatWoX?style=social)
-![Issues](https://img.shields.io/github/issues/yourname/StatWoX)
-![PRs](https://img.shields.io/badge/PRs-welcome-green)
+<h1><b>StatWoX : Surveys / Forms / Polls</b></h1>
+<h3><b><i>Let The Stat Work Out For Your Descision Making</i></b></h3>
 
-![React](https://img.shields.io/badge/React-19-61DAFB)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-3982CE)
-![Node](https://img.shields.io/badge/Node-20-green)
-![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange)
-![API Gateway](https://img.shields.io/badge/AWS-API_Gateway-orange)
-![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC)
-![Serverless](https://img.shields.io/badge/Architecture-Serverless-black)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-336791)
- 
-![Made by v3nd377a](https://img.shields.io/badge/Made_by-v3nd377a-black)
-![Powered by AWS](https://img.shields.io/badge/Powered_by-AWS-orange)
-![MVP Release](https://img.shields.io/badge/MVP-1.0.0-teal)
+<img src="https://img.shields.io/badge/build-passing-brightgreen" />
+<img src="https://img.shields.io/badge/version-1.0.0-blue" />
+<img src="https://img.shields.io/badge/license-MIT-purple" />
+<img src="https://img.shields.io/badge/PRs-welcome-green" />
+<img src="https://img.shields.io/badge/Made_by-V3nd377a_73C0rp-black" />
+<img src="https://img.shields.io/badge/Powered_by-AWS-orange" />
+<img src="https://img.shields.io/badge/MVP-1.0.0-teal" />
 
+<br/>
+
+<img src="https://img.shields.io/badge/React-19-61DAFB" />
+<img src="https://img.shields.io/badge/TypeScript-5-blue" />
+<img src="https://img.shields.io/badge/Prisma-ORM-3982CE" />
+<img src="https://img.shields.io/badge/Node-20-green" />
+<img src="https://img.shields.io/badge/AWS-Lambda-orange" />
+<img src="https://img.shields.io/badge/AWS-API_Gateway-orange" />
+<img src="https://img.shields.io/badge/Terraform-IaC-7B42BC" />
+<img src="https://img.shields.io/badge/Architecture-Serverless-black" />
+<img src="https://img.shields.io/badge/PostgreSQL-DB-336791" />
+
+</div>
+
+<br>
 
 A modern open source forms and surveys platform that works like Google Forms mixed with Typeform but with a cleaner developer experience and a fully serverless backend.
 
 Built with React, Express, Prisma, AWS Lambda, API Gateway, S3, CloudFront, and Terraform.
 
-Spin up surveys, share them instantly, collect responses, view insights.
+Spin up surveys, share them instantly, collect responses, view insights, save responses to your GDrive or Local.
+
 Simple idea. Sharp execution.
 
 ---
