@@ -3,11 +3,9 @@
 <h1><b>StatWoX : Surveys / Forms / Polls</b></h1>
 <h3><b><i>Let The Stat Work Out For Your Descision Making</i></b></h3>
 
-<img src="https://img.shields.io/badge/build-passing-brightgreen" />
-<img src="https://img.shields.io/badge/version-1.0.0-blue" />
-<img src="https://img.shields.io/badge/license-MIT-purple" />
+<img src="https://img.shields.io/badge/Build-passing-brightgreen" />
+<img src="https://img.shields.io/badge/Version-1.0.0-blue" />
 <img src="https://img.shields.io/badge/PRs-welcome-green" />
-<img src="https://img.shields.io/badge/Made_by-V3nd377a_73C0rp-black" />
 <img src="https://img.shields.io/badge/Powered_by-AWS-orange" />
 <img src="https://img.shields.io/badge/MVP-1.0.0-teal" />
 
@@ -23,6 +21,8 @@
 <img src="https://img.shields.io/badge/Architecture-Serverless-black" />
 <img src="https://img.shields.io/badge/PostgreSQL-DB-336791" />
 
+<img src="https://img.shields.io/badge/Made_by-V3nd377a_73C0rp-black" />
+<img src="https://img.shields.io/badge/License-MIT-purple" />
 </div>
 
 <br>
