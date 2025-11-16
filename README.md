@@ -1,30 +1,56 @@
 # **StatWoX**
 
-A modern open source forms and surveys platform that works like Google Forms mixed with Typeform but with a cleaner developer experience and a completely serverless backend.
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-purple)
+![Last Commit](https://img.shields.io/github/last-commit/yourname/StatWoX)
+![Stars](https://img.shields.io/github/stars/yourname/StatWoX?style=social)
+![Issues](https://img.shields.io/github/issues/yourname/StatWoX)
+![PRs](https://img.shields.io/badge/PRs-welcome-green)
+
+![React](https://img.shields.io/badge/React-19-61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
+![Prisma](https://img.shields.io/badge/Prisma-ORM-3982CE)
+![Node](https://img.shields.io/badge/Node-20-green)
+![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange)
+![API Gateway](https://img.shields.io/badge/AWS-API_Gateway-orange)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC)
+![Serverless](https://img.shields.io/badge/Architecture-Serverless-black)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-336791)
+ 
+![Made by v3nd377a](https://img.shields.io/badge/Made_by-v3nd377a-black)
+![Powered by AWS](https://img.shields.io/badge/Powered_by-AWS-orange)
+![MVP Release](https://img.shields.io/badge/MVP-1.0.0-teal)
+
+
+A modern open source forms and surveys platform that works like Google Forms mixed with Typeform but with a cleaner developer experience and a fully serverless backend.
+
 Built with React, Express, Prisma, AWS Lambda, API Gateway, S3, CloudFront, and Terraform.
 
-StatWoX is your personal form and survey engine. Spin it up, share a link, collect responses, view insights.
+Spin up surveys, share them instantly, collect responses, view insights.
 Simple idea. Sharp execution.
 
 ---
-## Visit StatWoX Surveys - ( Work In Progress )
 
-> Link In StatWoX Repo Description 
+## **Visit StatWoX Surveys (Work In Progress)**
+
+> Link inside repo description.
 
 ---
 
 # **Table of Contents**
 
-* What StatWoX Does
-* Architecture Diagram
-* Variable Flow Diagram
-* User Flow Diagram
-* Tech Stack
-* Local Setup Guide
-* Production Deployment (Terraform)
-* API Reference
-* Contributing Guide
-* Changelog
+* [What StatWoX Does](#what-statwox-does)
+* [Architecture Diagram](#architecture-diagram)
+* [Detailed Architecture Breakdown](#detailed-architecture-breakdown)
+* [Variable Flow Diagram](#variable-flow-diagram)
+* [User Flow](#user-flow)
+* [Tech Stack](#tech-stack)
+* [Local Setup Guide](#local-setup-guide)
+* [Production Deployment Terraform](#production-deployment-terraform)
+* [API Reference](#api-reference)
+* [Contributing Guide](#contributing-guide)
+* [Changelog](#changelog)
 
 ---
 
@@ -32,45 +58,110 @@ Simple idea. Sharp execution.
 
 StatWoX is a full stack survey system with:
 
-* Authentication (register, login, JWT)
+* Authentication system
 * Dashboard for My Surveys
-* Public Home Feed with sample polls
-* Create survey or poll (modal only for now)
-* Serverless backend exposing `/api/auth` and `/api/surveys`
-* PostgreSQL via Prisma
+* Public Home Feed
+* Create Survey or Poll
+* Serverless backend with Express inside Lambda
+* PostgreSQL database through Prisma
 * Fully CDN hosted frontend
-* Infra deployed with Terraform
+* Terraform based infrastructure
 
-This is MVP ready and designed to scale easily.
+Scalable from day one.
 
 ---
 
 # **Architecture Diagram**
 
+Full system diagram showing all moving parts.
+
 ```mermaid
 flowchart TD
 
-    subgraph Client
-        A[Browser UI - React]<-->B[config.js]
-        A<-->C[LocalStorage Token]
+    subgraph UserSide
+        U[User Browser]
+        LS[LocalStorage Token]
     end
 
     subgraph Frontend
-        F[S3 Bucket Hosting HTML JS CSS]
-        CF[CloudFront CDN]
+        FE[React App - Vite Build]
+        CFG[config.js API URL Injection]
+        CDN[CloudFront CDN]
+        S3[S3 Static Site Bucket]
     end
 
     subgraph Backend
-        L[Lambda - Node20 Express API]
-        G[API Gateway HTTP API]
-        DB[(PostgreSQL - Prisma)]
+        APIGW[API Gateway HTTP API]
+        LAMBDA[Lambda Function with Express]
+        EXPRESS[Express App Router]
+        AUTHMW[Auth Middleware JWT Verify]
+        PRISMA[Prisma Client]
+        POSTGRES[(PostgreSQL DB)]
     end
 
-    A --> CF --> F
-    A --> G
-    G --> L
-    L --> DB
+    subgraph Infra
+        TF[Terraform Modules]
+        IAM[IAM Roles and Policies]
+        OAC[Origin Access Control]
+    end
+
+    U --> FE
+    FE --> CFG
+    FE --> CDN --> S3
+    FE --> APIGW
+    APIGW --> LAMBDA
+    LAMBDA --> EXPRESS
+    EXPRESS --> AUTHMW
+    EXPRESS --> PRISMA
+    PRISMA --> POSTGRES
+
+    TF --> APIGW
+    TF --> LAMBDA
+    TF --> S3
+    TF --> CDN
+    TF --> IAM
+    CDN --> OAC
 ```
+
+---
+
+# **Detailed Architecture Breakdown**
+
+### **Frontend**
+
+* Built with React 19
+* Bundled by Vite
+* Tailwind loaded via CDN
+* Entire static site hosted in S3
+* Served globally through CloudFront
+* API_URL injected through config.js at deploy time
+* Uses localStorage for JWT token caching
+
+### **Backend**
+
+* Express.js running inside AWS Lambda
+* Serverless HTTP wrapper
+* JWT authentication for user sessions
+* Prisma client handles DB access
+* PostgreSQL remote instance
+* API Gateway handles all routing via `$default` catch all
+
+### **Infrastructure**
+
+* Terraform provisions everything
+* Zero public S3 access
+* CloudFront OAC signed access
+* Lambda zipped using archive_file
+* IAM roles created for Lambda execution
+* Database URL and JWT secret stored as env vars inside Lambda
+
+### **Build Flow**
+
+* `Vite build` outputs `dist/` with static assets
+* Terraform uploads them to S3 using dynamic fileset
+* Backend build creates lambda.js via esbuild
+* Zip is created and deployed as Lambda function source
+* Terraform outputs API URL and CloudFront domain
 
 ---
 
@@ -78,12 +169,13 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    FE[Frontend React] --> CFG[window.STATWOX_API_URL]
-    CFG --> API[API Gateway URL]
-    API --> JWT[Authorization: Bearer Token]
-    JWT --> LAMBDA[Lambda Express]
-    LAMBDA --> ENV[(DATABASE_URL, JWT_SECRET)]
-    ENV --> DB[(Postgres)]
+    FE[Frontend] --> CONFIG[config.js]
+    CONFIG --> APIURL[API Gateway Endpoint]
+    FE --> TOKEN[LocalStorage Token]
+    TOKEN --> HeaderAuth[Authorization Header]
+    HeaderAuth --> Lambda
+    Lambda --> EnvVars[(DATABASE_URL and JWT_SECRET)]
+    EnvVars --> Postgres[(PostgreSQL)]
 ```
 
 ---
@@ -98,58 +190,43 @@ sequenceDiagram
     participant L as Lambda API
     participant DB as PostgreSQL
 
-    U->>FE: Opens StatWoX
-    FE->>U: Shows Login or Dashboard
-    U->>FE: Submit Login/Register
+    U->>FE: Load StatWoX App
+    FE->>U: Render Login or Dashboard
+    U->>FE: Submit Credentials
     FE->>API: POST /api/auth/login
-    API->>L: Forward request
+    API->>L: Invoke Lambda
     L->>DB: Validate User
-    DB-->>L: User found
+    DB-->>L: User Loaded
     L-->>FE: JWT Token
-    FE->>Storage: Save Token
+    FE->>LS: Save Token
 
-    U->>FE: Opens My Surveys
-    FE->>API: GET /api/surveys (Bearer token)
-    API->>L: Forward request
-    L->>DB: Fetch survey list
-    DB-->>L: Data
-    L-->>FE: Return surveys
+    U->>FE: Visit My Surveys
+    FE->>API: GET /api/surveys
+    API->>L: Pass Bearer Token
+    L->>DB: Fetch Surveys
+    DB-->>L: Survey Data
+    L-->>FE: Return JSON
 ```
+
+---
+
+Say less. Clean table. All badges. GitHub safe.
 
 ---
 
 # **Tech Stack**
 
-**Frontend**
-
-* React 19
-* Vite
-* TypeScript
-* Tailwind (CDN)
-* CloudFront + S3 hosting
-
-**Backend**
-
-* Express
-* Serverless HTTP wrapper
-* Prisma ORM
-* PostgreSQL
-* JWT auth
-* Bcrypt for password hashing
-
-**Infra**
-
-* AWS API Gateway
-* AWS Lambda
-* AWS S3
-* AWS CloudFront
-* Terraform (full IaC)
+| Category           | Tools                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Frontend**       | ![React](https://img.shields.io/badge/React-19-61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Vite](https://img.shields.io/badge/Vite-Bundler-646CFF) ![Tailwind](https://img.shields.io/badge/TailwindCSS-Utility_First-38BDF8) ![CloudFront](https://img.shields.io/badge/CloudFront-CDN-orange) ![S3](https://img.shields.io/badge/S3-Static_Hosting-red) |
+| **Backend**        | ![Express](https://img.shields.io/badge/Express.js-Server-lightgrey) ![Node](https://img.shields.io/badge/Node-20-green) ![Prisma](https://img.shields.io/badge/Prisma-ORM-3982CE) ![Bcrypt](https://img.shields.io/badge/BCryptJS-Hashing-yellow) ![JWT](https://img.shields.io/badge/JWT-Auth-blueviolet)                                                                           |
+| **Infrastructure** | ![Lambda](https://img.shields.io/badge/AWS-Lambda-orange) ![API Gateway](https://img.shields.io/badge/AWS-API_Gateway-orange) ![S3](https://img.shields.io/badge/AWS-S3-red) ![CloudFront](https://img.shields.io/badge/AWS-CloudFront-purple) ![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC)                                                                        |
 
 ---
 
-# **Local Setup Guide**
+Want me to inject this directly into the README or regenerate the full README again with this included?
 
-Get everything running locally for development.
+# **Local Setup Guide**
 
 ## **1. Clone Repository**
 
@@ -165,30 +242,25 @@ cd backend
 npm install
 ```
 
-### **Environment Variables**
-
-Create `.env` inside `backend`:
+### .env file
 
 ```
 DATABASE_URL="postgresql://user:pass@localhost:5432/statwox"
 JWT_SECRET="super_secret_key"
 ```
 
-### **Run Migrations**
+### Migrate and run
 
 ```
 npx prisma migrate dev
-```
-
-### **Start Dev Server**
-
-```
 npm run dev
 ```
 
-Backend runs on `http://localhost:5000`.
+Backend lives at:
 
----
+```
+http://localhost:5000
+```
 
 ## **3. Frontend Setup**
 
@@ -198,10 +270,7 @@ npm install
 npm run dev
 ```
 
-Frontend runs on `http://localhost:3000`.
-
-To override API:
-Create `public/config.js` or match your hosting:
+Add config.js:
 
 ```js
 window.STATWOX_API_URL = "http://localhost:5000"
@@ -209,219 +278,133 @@ window.STATWOX_API_URL = "http://localhost:5000"
 
 ---
 
-## **4. Connecting Frontend to Backend**
+# **Production Deployment Terraform**
 
-The frontend reads API URL from:
-
-```
-/config.js
-```
-
-Which Terraform generates in production.
-During local dev, create it manually.
-
----
-
-# **Production Deployment (Terraform)**
-
-## **1. Install deps**
+### Requirements
 
 ```
-brew install terraform
-brew install direnv
+terraform
+direnv
+aws cli
 ```
 
-## **2. Load environment variables**
+### Load env vars
 
-Create `.envrc` inside `infra/`:
+.envrc inside infra:
 
 ```
 export DATABASE_URL="postgres://..."
-export JWT_SECRET="super_secret"
+export JWT_SECRET="random_secret"
 export AWS_ACCESS_KEY_ID="xxx"
 export AWS_SECRET_ACCESS_KEY="yyy"
 ```
 
-Then:
+Allow env:
 
 ```
 direnv allow
 ```
 
-## **3. Build Backend**
+### Build backend
 
 ```
-cd backend
 npm run build
 ```
 
-This outputs `dist/lambda.js`
-
-## **4. Build Frontend**
+### Build frontend
 
 ```
-cd frontend
 npm run build
 ```
 
-## **5. Deploy**
+### Deploy
 
 ```
-cd infra
 terraform init
 terraform apply
 ```
-
-Outputs include:
-
-* CloudFront domain
-* API Gateway base URL
-* S3 bucket name
-
-Copy CloudFront domain into DNS if needed.
 
 ---
 
 # **API Reference**
 
-Backend exposes a simple but clean API.
+## **POST /api/auth/register**
 
-## **Auth Routes**
-
-### **POST /api/auth/register**
-
-Create a user.
-
-**Body**
+Body:
 
 ```json
 {
   "username": "john",
   "email": "john@example.com",
-  "password": "secret123"
+  "password": "test123"
 }
 ```
 
-**Response**
+## **POST /api/auth/login**
+
+Returns token:
 
 ```json
 {
-  "message": "User created successfully",
-  "userId": "cuid_123"
+  "token": "jwt_token",
+  "userId": "cuid_xxx"
 }
 ```
 
----
+## **GET /api/surveys**
 
-### **POST /api/auth/login**
-
-Returns JWT token.
-
-**Body**
-
-```json
-{
-  "email": "john@example.com",
-  "password": "secret123"
-}
-```
-
-**Response**
-
-```json
-{
-  "token": "jwt_string",
-  "userId": "cuid_123"
-}
-```
-
----
-
-## **Survey Routes**
-
-### **GET /api/surveys**
-
-Requires Authorization header:
+Requires header:
 
 ```
-Authorization: Bearer <jwt>
+Authorization: Bearer <token>
 ```
-
-**Response**
-
-```json
-[
-  {
-    "id": "abc",
-    "title": "My First Survey",
-    "status": "Draft",
-    "responses": 0
-  }
-]
-```
-
-Future versions will include real response counts.
 
 ---
 
 # **Contributing Guide**
 
-Thanks for being here. Contributions are welcome.
+### Branch Naming
 
-## **Branch Naming**
+* feat
+* fix
+* refactor
+* infra
 
-Use:
-
-* `feat/xyz`
-* `fix/bugname`
-* `refactor/componentname`
-* `infra/xxx`
-
-## **Commit Messages**
-
-Follow this structure:
+### Commit Format
 
 ```
 type(scope): message
 ```
 
-Examples:
+### Rules
 
-```
-feat(auth): added JWT expiry check
-fix(ui): modal close handler fixed
-refactor(api): improved error handling
-```
-
-## **Coding Guidelines**
-
-* Always use TypeScript
-* Follow existing file structure
-* Run `npm run build` before pushing backend changes
-* Test infra in sandbox accounts only
-* Do not commit `.env` or any secrets
-
-## **Before Opening PR**
-
-* Run Prettier
-* Add comments for complex logic
-* Keep PRs small and focused
+* Use TypeScript
+* Keep PRs small
+* Do not commit secrets
+* Document complex logic
 
 ---
 
 # **Changelog**
 
-Semantic versioning starts here.
+## **v1.0.0**
 
-## **v1.0.0 MVP**
-
-* Full React frontend with login, dashboard, home feed
+* React frontend
 * Serverless Express backend
-* Prisma PostgreSQL models
-* JWT authentication
-* Survey fetch endpoint
-* Terraform infrastructure for API Gateway, Lambda, CloudFront, S3
-* Aurora styled UI and theme switching
-* Config.js dynamic API URL injection
+* Prisma models
+* Terraform infra
+* CloudFront hosting
+* JWT auth
+* Survey fetch working
 
 ---
+
+If you want, I can also generate:
+
+* ISSUE_TEMPLATE
+* PULL_REQUEST_TEMPLATE
+* SECURITY.md
+* FUNDING.yml
+* A logo for StatWoX
+
+Just say the word.
