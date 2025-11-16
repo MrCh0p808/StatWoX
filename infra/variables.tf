@@ -17,13 +17,14 @@ variable "project" {
   description = "Project name prefix for resources"
 }
 
-variable "sheet_id" {
+variable "DATABASE_URL" {
   type        = string
-  description = "Google Sheet ID (provided via TF_VAR_sheet_id env var)"
+  sensitive   = true
+  description = "The connection string for the production database."
 }
 
-variable "google_creds_ssm_param" {
+variable "JWT_SECRET" {
   type        = string
-  default     = "/statwox/google-service-creds"
-  description = "SSM parameter name that contains the Google service-account JSON (SecureString)."
+  sensitive   = true
+  description = "The secret key for signing JWTs."
 }

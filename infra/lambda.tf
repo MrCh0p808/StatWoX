@@ -1,6 +1,6 @@
 data "archive_file" "lambda_zip" {
   type        = "zip"
-  source_dir  = "${path.module}/../backend"
+  source_dir  = "${path.module}/../backend/dist"
   output_path = "${path.module}/lambda.zip"
   excludes    = fileexists("${path.module}/../backend/.lambdaignore") ? split("\n", file("${path.module}/../backend/.lambdaignore")) : []
 }
@@ -28,13 +28,13 @@ resource "aws_lambda_function" "submit" {
   role             = aws_iam_role.lambda_exec.arn
   runtime          = "nodejs20.x"
   handler          = "lambda.handler"
-  filename         = data.archive_file.lambda_zip.output_path
+  filename = "${path.module}/lambda.zip"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
 
   environment {
     variables = {
-      SHEET_ID               = var.sheet_id
-      GOOGLE_CREDS_SSM_PARAM = var.google_creds_ssm_param
+      DATABASE_URL = var.DATABASE_URL
+      JWT_SECRET   = var.JWT_SECRET
     }
   }
   timeout    = 10

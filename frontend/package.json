@@ -1,5 +1,5 @@
 {
-  "name": "statwox---forms-&-surveys-overhaul-mvp-1.0",
+  "name": "statwox-mvp1.0-v3nd377a-73c0rp",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,12 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "bcryptjs": "^3.0.3",
-    "@prisma/client": "^6.19.0",
-    "express": "^5.1.0",
-    "dotenv": "^17.2.3",
-    "jsonwebtoken": "^9.0.2"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
