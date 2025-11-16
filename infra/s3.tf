@@ -15,10 +15,6 @@ resource "aws_s3_bucket_ownership_controls" "frontend" {
   bucket = aws_s3_bucket.frontend.id
   rule { object_ownership = "BucketOwnerEnforced" }
 }
-
-  error_document { key = "index.html" }
-}
-
 resource "aws_s3_bucket_policy" "frontend" {
   bucket = aws_s3_bucket.frontend.id
 
@@ -51,13 +47,13 @@ resource "aws_s3_object" "index" {
   etag         = filemd5("${path.module}/../frontend/index.html")
 }
 
-resource "aws_s3_object" "appjs" {
-  bucket       = aws_s3_bucket.frontend.id
-  key          = "app.js"
-  source       = "${path.module}/../frontend/app.js"
-  content_type = "application/javascript"
-  etag         = filemd5("${path.module}/../frontend/app.js")
-}
+# resource "aws_s3_object" "appjs" {
+#  bucket       = aws_s3_bucket.frontend.id
+#  key          = "app.js"
+#  source       = "${path.module}/../frontend/app.js"
+#  content_type = "application/javascript"
+#  etag         = filemd5("${path.module}/../frontend/app.js")
+# }
 
 resource "aws_s3_object" "configjs" {
   bucket       = aws_s3_bucket.frontend.id

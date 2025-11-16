@@ -3,9 +3,9 @@ resource "aws_apigatewayv2_api" "http" {
   protocol_type = "HTTP"
 
   cors_configuration {
-    allow_headers = ["content-type"]
-    allow_methods = ["OPTIONS", "POST"]
-    allow_origins = ["*"]
+    allow_headers = ["Content-Type", "Authorization"]
+    allow_methods = ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
+    allow_origins = ["*"] # For development; restrict this in production
   }
 }
 
@@ -16,15 +16,15 @@ resource "aws_apigatewayv2_integration" "lambda" {
   payload_format_version = "2.0"
 }
 
-resource "aws_apigatewayv2_route" "submit" {
+resource "aws_apigatewayv2_route" "default" {
   api_id    = aws_apigatewayv2_api.http.id
-  route_key = "POST /submit"
+  route_key = "$default" # This is the catch-all proxy route
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 
 resource "aws_apigatewayv2_stage" "prod" {
   api_id      = aws_apigatewayv2_api.http.id
-  name        = "prod"
+  name        = "$default" # Use the default stage for simpler URLs
   auto_deploy = true
 }
 

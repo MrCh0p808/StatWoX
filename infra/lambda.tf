@@ -2,6 +2,7 @@ data "archive_file" "lambda_zip" {
   type        = "zip"
   source_dir  = "${path.module}/../backend"
   output_path = "${path.module}/lambda.zip"
+  excludes    = fileexists("${path.module}/../backend/.lambdaignore") ? split("\n", file("${path.module}/../backend/.lambdaignore")) : []
 }
 
 resource "aws_iam_role" "lambda_exec" {
