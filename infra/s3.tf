@@ -22,8 +22,8 @@ resource "aws_s3_bucket_policy" "frontend" {
     Version = "2012-10-17",
     Statement = [
       {
-        Sid      = "AllowCloudFrontServicePrincipalReadOnly",
-        Effect   = "Allow",
+        Sid    = "AllowCloudFrontServicePrincipalReadOnly",
+        Effect = "Allow",
         Principal = {
           Service = "cloudfront.amazonaws.com"
         },
@@ -39,25 +39,42 @@ resource "aws_s3_bucket_policy" "frontend" {
   })
 }
 
-resource "aws_s3_object" "index" {
-  bucket       = aws_s3_bucket.frontend.id
-  key          = "index.html"
-  source       = "${path.module}/../frontend/index.html"
-  content_type = "text/html"
-  etag         = filemd5("${path.module}/../frontend/index.html")
+# Upload entire frontend/dist directory
+
+locals {
+  frontend_dist_dir = "${path.module}/../frontend/dist"
+  frontend_files    = fileset(local.frontend_dist_dir, "**")
 }
 
-# resource "aws_s3_object" "appjs" {
-#  bucket       = aws_s3_bucket.frontend.id
-#  key          = "app.js"
-#  source       = "${path.module}/../frontend/app.js"
-#  content_type = "application/javascript"
-#  etag         = filemd5("${path.module}/../frontend/app.js")
-# }
+resource "aws_s3_bucket_object" "frontend_dist" {
+  for_each = { for f in local.frontend_files : f => f }
+
+  bucket = aws_s3_bucket.frontend.id
+  key    = each.key
+  source = "${local.frontend_dist_dir}/${each.key}"
+
+  content_type = lookup({
+    html = "text/html",
+    js   = "application/javascript",
+    css  = "text/css",
+    json = "application/json"
+  }, split(".", each.key)[length(split(".", each.key)) - 1], "binary/octet-stream")
+
+  server_side_encryption = "AES256"
+  storage_class          = "STANDARD"
+
+  tags = {
+    ManagedBy   = "Terraform"
+    Project     = "statwox"
+    Environment = "prod"
+    Owner       = "v3nd377a_7ecorp"
+    CostCenter  = "FreeTier"
+  }
+}
 
 resource "aws_s3_object" "configjs" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "config.js"
-  content = "window.STATWOX_API_URL = \"${aws_apigatewayv2_api.http.api_endpoint}\";"  
+  content      = "window.STATWOX_API_URL = \"${aws_apigatewayv2_api.http.api_endpoint}\";"
   content_type = "application/javascript"
 }
