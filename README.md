@@ -397,5 +397,3 @@ type(scope): message
 ---
 
 
-Just say the word.
-
