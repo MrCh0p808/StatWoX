@@ -122,4 +122,4 @@ aws/
 
 --- Lambda Bundles ---
 
-*.zip
+*.zip.envrc
