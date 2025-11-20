@@ -1,24 +1,31 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import authRoutes from './routes/auth';
-import surveyRoutes from './routes/surveys';
+import authRoutes from './routes/auth.js';
+import surveyRoutes from './routes/surveys.js';
+import feedRoutes from './routes/feed.js';
+import googleAuth from './routes/googleAuth.js';
 
 // Load environment variables
 dotenv.config();
 
+const allowedOrigin = process.env.ALLOWED_ORIGIN || "*";
 const app = express();
 
 // Middleware
 app.use(cors({
-    origin: "https://YOUR_CLOUDFRONT_DOMAIN"
+  origin: allowedOrigin,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  credentials: true,
 }));
 // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Enable JSON body parsing
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/surveys', surveyRoutes);
+app.use('/api/auth/google', googleAuth);
+app.use("/api/surveys", surveyRoutes);
+app.use("/api/feed", feedRoutes);
 
 // Simple health check route
 app.get('/', (req, res) => {

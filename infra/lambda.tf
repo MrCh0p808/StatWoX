@@ -35,6 +35,7 @@ resource "aws_lambda_function" "submit" {
     variables = {
       DATABASE_URL = var.DATABASE_URL
       JWT_SECRET   = var.JWT_SECRET
+      ALLOWED_ORIGIN = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
     }
   }
   timeout    = 10

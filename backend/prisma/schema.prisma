@@ -1,13 +1,27 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql" // Using SQLite for simplicity, can be changed to PostgreSQL, etc.
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum SurveyCategory {
+  survey
+  form
+  poll
+}
+
+enum QuestionType {
+  shortText
+  longText
+  multipleChoice
+  rating
+  date
+  email
+  phoneNumber
+  yesNo
 }
 
 model User {
@@ -21,39 +35,42 @@ model User {
 }
 
 model Survey {
-  id          String    @id @default(cuid())
+  id          String          @id @default(cuid())
   title       String
+  category    SurveyCategory
   description String?
-  status      String    @default("Draft") // "Draft", "Published", "Archived"
-  author      User      @relation(fields: [authorId], references: [id])
+  status      String          @default("Draft") // Draft, Published, Archived
+  author      User            @relation(fields: [authorId], references: [id])
   authorId    String
   questions   Question[]
   responses   SurveyResponse[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 }
 
 model Question {
-  id        String    @id @default(cuid())
+  id        String          @id @default(cuid())
   text      String
-  type      String // "MULTIPLE_CHOICE", "TEXT", "RATING"
-  survey    Survey    @relation(fields: [surveyId], references: [id])
+  type      QuestionType
+  helpText  String?
+  required  Boolean         @default(false)
+  survey    Survey          @relation(fields: [surveyId], references: [id])
   surveyId  String
   options   QuestionOption[]
   order     Int
 }
 
 model QuestionOption {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   text       String
-  question   Question @relation(fields: [questionId], references: [id])
+  question   Question  @relation(fields: [questionId], references: [id])
   questionId String
 }
 
 model SurveyResponse {
-  id        String   @id @default(cuid())
-  survey    Survey   @relation(fields: [surveyId], references: [id])
-  surveyId  String
-  // You can add answers here later, linked to questions
+  id         String   @id @default(cuid())
+  survey     Survey   @relation(fields: [surveyId], references: [id])
+  surveyId   String
+  payload    Json     // <---- THIS stores answers + metadata
   submittedAt DateTime @default(now())
 }
