@@ -124,12 +124,18 @@ export const submitResponse = async (req: Request, res: Response) => {
 
     // create response entry
     const response = await prisma.surveyResponse.create({
-      data: {
+    data: {
         id: uuidv4(),
         surveyId: id,
         payload: { answers, meta: meta ?? {} }
-      }
+    }
     });
+
+    // DO NOT try to increment 'responses' field - it is a relation, not an Int.
+    // If you want a cached counter, add `responseCount Int @default(0)` to Survey schema and migrate.
+
+    return res.status(201).json({ ok: true, id: response.id });
+
 
     // increment cached counter on Survey (optional)
     await prisma.survey.update({

@@ -7,20 +7,21 @@ const router = Router();
 router.get("/", async (req, res) => {
   try {
     const items = await prisma.survey.findMany({
-      where: { status: "Published" },
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: { select: { responses: true } }
-      },
-      take: 30
+    where: { status: "Published" },
+    orderBy: { createdAt: "desc" },
+    include: {
+        _count: { select: { responses: true } },
+        author: { select: { username: true } }
+    },
+    take: 30
     });
 
     const formatted = items.map(item => ({
-      id: item.id,
-      title: item.title,
-      responses: item._count.responses,
-      author: item.authorId,
-      category: item.category
+    id: item.id,
+    title: item.title,
+    responses: item._count.responses,
+    author: item.author?.username ?? item.authorId,
+    category: item.category
     }));
 
     return res.json({

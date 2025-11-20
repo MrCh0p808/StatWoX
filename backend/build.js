@@ -40,10 +40,17 @@ const prismaClientDir = "./node_modules/.prisma/client";
 const files = readdirSync(prismaClientDir);
 
 // Look for engine file that ends with .so.node
-const engineFile = files.find(f => f.endsWith(".so.node"));
+// Look for Prisma engine file (common suffixes)
+const engineFile = files.find(f =>
+  f.endsWith('.so.node') ||
+  f.endsWith('.dylib.node') ||
+  f.endsWith('.dll.node') ||
+  f.includes('query-engine') || // fallback
+  f.endsWith('.node')
+);
 
 if (!engineFile) {
-  throw new Error("[BUILD ERROR] Could not find Prisma engine (.so.node) in .prisma/client");
+  throw new Error("[BUILD ERROR] Could not find Prisma engine in .prisma/client. Files: " + files.join(', '));
 }
 
 copyFileSync(
