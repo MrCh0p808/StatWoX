@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { StatwoxLogo } from './icons/StatwoxLogo';
+import Logo from './Logo';
 import { GoogleIcon } from './icons/GoogleIcon';
 import { PhoneIcon } from './icons/PhoneIcon';
 import { EyeIcon } from './icons/EyeIcon';
@@ -96,8 +96,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="min-h-screen flex items-center justify-center p-4">
             <div className="w-full max-w-md">
                 <div className="bg-white dark:bg-gray-900/80 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl p-8 space-y-6 ring-1 ring-black/5">
-                    <div className="flex justify-center py-4 scale-110">
-                        <StatwoxLogo className="h-16 w-auto" />
+                    <div className="flex justify-center mb-6">
+                        <Logo size="xl" />
                     </div>
                     <h2 className="text-center text-3xl font-black text-gray-900 dark:text-white tracking-tight">
                         {isLogin ? 'Welcome Back' : 'Create Account'}

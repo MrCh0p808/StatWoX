@@ -4,6 +4,7 @@ import { HomeIcon } from './icons/HomeIcon';
 import { DocumentTextIcon } from './icons/DocumentTextIcon';
 import { UserIcon } from './icons/UserIcon';
 import { XIcon } from './icons/XIcon';
+import Logo from './Logo';
 
 interface SidebarProps {
     activeView: View;
@@ -28,7 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, setActiveView, isO
             <aside className={`fixed lg:relative inset-y-0 left-0 w-72 bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-2xl border-r border-gray-200/50 dark:border-white/10 p-5 flex-shrink-0 z-40 transform transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'} text-gray-800 dark:text-white shadow-2xl lg:shadow-none`}>
                 <div className="flex items-center justify-between h-20 mb-2 px-2">
                     <div className="w-full text-center lg:text-left">
-                        <span className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">Menu</span>
+                        <Logo size="sm" className="mx-auto mb-4" />
                     </div>
                     <button onClick={() => setIsOpen(false)} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white lg:hidden p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                         <XIcon />

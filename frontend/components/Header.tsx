@@ -6,7 +6,7 @@ import { BellIcon } from './icons/BellIcon';
 import { UserCircleIcon } from './icons/UserCircleIcon';
 import { LogoutIcon } from './icons/LogoutIcon';
 import { MenuIcon } from './icons/MenuIcon';
-import { StatwoxLogo } from './icons/StatwoxLogo';
+import Logo from "./Logo";
 
 interface HeaderProps {
     onMenuClick: () => void;
@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout, notificat
                     {/* Logo Container - Responsive Sizing */}
                     <div className="flex-1 flex justify-center lg:w-1/3">
                         <div className="h-8 lg:h-9 w-auto flex items-center justify-center">
-                             <StatwoxLogo className="h-full w-auto max-w-[150px] lg:max-w-[200px]" />
+                            <Logo size="md" className="cursor-pointer select-none" />
                         </div>
                     </div>
 
