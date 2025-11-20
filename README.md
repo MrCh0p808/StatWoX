@@ -21,8 +21,8 @@
 <img src="https://img.shields.io/badge/Architecture-Serverless-black" />
 <img src="https://img.shields.io/badge/PostgreSQL-DB-336791" />
 
-<img src="https://img.shields.io/badge/Made_by-V3nd377a_73C0rp-black" />
 <img src="https://img.shields.io/badge/License-MIT-purple" />
+<img src="https://img.shields.io/badge/Made_by-V3nd377a_73C0rp-black" />
 </div>
 
 <br>
