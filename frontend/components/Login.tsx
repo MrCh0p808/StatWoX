@@ -100,7 +100,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         <Logo size="xl" />
                     </div>
                     <h2 className="text-center text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                        {isLogin ? 'Welcome Back' : 'Create Account'}
+                        {isLogin ? 'Login To Continue' : 'Create Account'}
                     </h2>
                     {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3"><p className="text-center text-sm font-medium text-red-600">{error}</p></div>}
                     {successMessage && <div className="bg-green-50 border border-green-100 rounded-xl p-3"><p className="text-center text-sm font-medium text-green-600">{successMessage}</p></div>}

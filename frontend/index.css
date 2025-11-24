@@ -1,0 +1,42 @@
+/* Neon Breathing Glow */
+@keyframes neon-breathe {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px #00f7ff)
+            drop-shadow(0 0 10px #00f7ff)
+            drop-shadow(0 0 20px #00e1ff);
+    opacity: 0.92;
+  }
+  50% {
+    filter: drop-shadow(0 0 8px #39bdfc)
+            drop-shadow(0 0 20px #00eaff)
+            drop-shadow(0 0 40px #00eaff);
+    opacity: 1;
+  }
+}
+
+/* Cyberpunk Gradient Flow */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Apply Glow + Gradient */
+.neon-glow {
+  animation: neon-breathe 3s ease-in-out infinite;
+  position: relative;
+  z-index: 2;
+}
+
+.neon-glow::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #00eaff, #7c3aed, #ff00f7);
+  background-size: 200% 200%;
+  mix-blend-mode: screen;
+  animation: gradient-shift 6s ease-in-out infinite;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 3;
+}
