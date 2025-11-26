@@ -91,3 +91,10 @@ Thumbs.db
 
 # --- Lambda Bundles ---
 *.zip
+
+# --- Dev / Test Scripts ---
+backend/diagnose_db.js
+backend/diagnose_db.ts
+backend/test_auth.js
+backend/test_backend.cjs
+backend/test_connection.js
