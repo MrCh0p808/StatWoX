@@ -7,18 +7,22 @@ const prisma = new PrismaClient();
 
 /**
  * POST /api/surveys
- * Body: SurveyDraft (see frontend/types.ts)
+ * This is where I create a new survey.
+ * It expects a JSON body with the survey title, questions, etc.
  */
 export const createSurvey = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId || null; // set by auth middleware
+    // Getting the user ID from the token (set by my auth middleware)
+    const userId = (req as any).userId || null;
     const draft = req.body;
 
+    // Basic validation to make sure I'm not saving junk data
     if (!draft || !draft.title || !Array.isArray(draft.questions)) {
       return res.status(400).json({ message: "Invalid survey draft" });
     }
 
-    // create survey and nested questions/options using prisma
+    // Creating the survey and all its questions in one go using Prisma's nested writes.
+    // This is super cool because it ensures everything is saved or nothing is.
     const survey = await prisma.survey.create({
       data: {
         id: draft.id || uuidv4(),
@@ -35,6 +39,7 @@ export const createSurvey = async (req: Request, res: Response) => {
             helpText: q.helpText ?? null,
             required: !!q.required,
             order: idx,
+            // If the question has options (like multiple choice), I map them here too
             options: q.options?.map((o: string) => ({ text: o })) ?? undefined
           }))
         }
@@ -51,13 +56,14 @@ export const createSurvey = async (req: Request, res: Response) => {
 
 /**
  * GET /api/surveys
- * Returns surveys for current user
+ * This lists all the surveys created by the currently logged-in user.
  */
 export const listSurveys = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
+    // Fetching surveys from the DB, ordered by newest first
     const surveys = await prisma.survey.findMany({
       where: { authorId: userId },
       orderBy: { createdAt: "desc" },
@@ -73,11 +79,12 @@ export const listSurveys = async (req: Request, res: Response) => {
 
 /**
  * GET /api/surveys/:id
- * Returns full survey for responder
+ * This fetches a single survey so someone can take it (Responder view).
  */
 export const getSurveyById = async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
+    // I need to include questions and their options so the frontend can render the form
     const survey = await prisma.survey.findUnique({
       where: { id },
       include: {
@@ -87,7 +94,7 @@ export const getSurveyById = async (req: Request, res: Response) => {
 
     if (!survey) return res.status(404).json({ message: "Survey not found" });
 
-    // shape to frontend SurveyDraft
+    // Transforming the DB data into the shape my frontend expects (SurveyDraft interface)
     const draft = {
       id: survey.id,
       category: survey.category,
@@ -112,17 +119,18 @@ export const getSurveyById = async (req: Request, res: Response) => {
 
 /**
  * POST /api/surveys/:id/responses
- * Body: { answers: { questionId: value, ... }, meta?: {...} }
+ * This saves the answers when someone submits a survey.
  */
 export const submitResponse = async (req: Request, res: Response) => {
   try {
     const id = req.params.id;
     const { answers, meta } = req.body;
+
     if (!answers || typeof answers !== "object") {
       return res.status(400).json({ message: "Invalid answers payload" });
     }
 
-    // create response entry
+    // Saving the response as a JSON blob for flexibility
     const response = await prisma.surveyResponse.create({
       data: {
         id: uuidv4(),
@@ -131,7 +139,8 @@ export const submitResponse = async (req: Request, res: Response) => {
       }
     });
 
-    // Increment cached counter on Survey
+    // Incrementing the response counter on the survey itself
+    // This makes it fast to show "10 responses" on the dashboard without counting rows every time
     await prisma.survey.update({
       where: { id },
       data: { responseCount: { increment: 1 } }

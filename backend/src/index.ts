@@ -1,31 +1,23 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import authRoutes from './routes/auth.js';
-import surveyRoutes from './routes/surveys.js';
-import feedRoutes from './routes/feed.js';
-import googleAuth from './routes/googleAuth.js';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import authRoutes from "./routes/auth.js";
+import surveyRoutes from "./routes/surveys.js";
+import feedRoutes from "./routes/feed.js";
+import googleAuth from "./routes/googleAuth.js";
 
-// Load environment variables
+// Loading my environment variables from the .env file
 dotenv.config();
 
-const allowedOrigin = [
-    "http://localhost:3000",
-    "http://localhost:5173",
-    process.env.ALLOWED_ORIGIN
-].filter(Boolean);
 const app = express();
+const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Setting up CORS so my frontend can talk to this backend
 app.use(cors({
-    origin: allowedOrigin,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    credentials: true,
+    origin: process.env.ALLOWED_ORIGIN || "*", // Allowing all origins for now if not specified
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
 }));
-// Enable Cross-Origin Resource Sharing
-app.use(express.json()); // Enable JSON body parsing
-
-// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/auth/google', googleAuth);
 app.use("/api/surveys", surveyRoutes);

@@ -11,13 +11,25 @@ interface ResponderProps {
 }
 
 export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) => {
+    // Storing the survey data I fetch from the backend
     const [survey, setSurvey] = useState<SurveyDraft | null>(null);
+
+    // Keeping track of the user's answers. Key is questionId, value is the answer.
     const [answers, setAnswers] = useState<Record<string, any>>({});
+
+    // Storing validation errors (like "This field is required")
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Loading state while I fetch the survey
     const [isLoading, setIsLoading] = useState(true);
+
+    // Submitting state to prevent double clicks
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Success state to show the "Thank You" screen
     const [isCompleted, setIsCompleted] = useState(false);
 
+    // Fetching the survey details when the component loads
     useEffect(() => {
         // BACKEND NOTE: Fetch the specific survey by ID from your database.
         const fetchSurvey = async () => {
@@ -38,9 +50,10 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
         fetchSurvey();
     }, [surveyId]);
 
+    // Updating the answers state when the user types or selects something
     const handleAnswerChange = (questionId: string, value: any) => {
         setAnswers(prev => ({ ...prev, [questionId]: value }));
-        // Clear error if exists when user starts typing
+        // If there was an error on this question, I clear it now that they've changed it
         if (errors[questionId]) {
             setErrors(prev => {
                 const newErrors = { ...prev };
@@ -50,10 +63,11 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
         }
     };
 
+    // Validating and sending the response to the server
     const handleSubmit = async () => {
         if (!survey) return;
 
-        // Frontend Validation: check if required fields are filled
+        // Frontend Validation: checking if all required fields are filled
         const newErrors: Record<string, string> = {};
         let hasError = false;
 
@@ -66,7 +80,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
 
         if (hasError) {
             setErrors(newErrors);
-            // Scroll to first error for better UX
+            // Scrolling to the first error so the user sees what they missed
             const firstErrorId = Object.keys(newErrors)[0];
             const element = document.getElementById(`question-${firstErrorId}`);
             element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -76,6 +90,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
         setIsSubmitting(true);
 
         try {
+            // Sending the answers to the backend
             const res = await fetch(`/api/surveys/${surveyId}/responses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -104,6 +119,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
 
     if (!survey) return <div className="text-center py-20 text-gray-500 font-bold">Survey not found.</div>;
 
+    // Showing the success screen if they finished
     if (isCompleted) {
         return (
             <div className="min-h-full flex items-center justify-center p-4">
@@ -126,7 +142,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
         );
     }
 
-    // Poll Layout (Centered Card) vs Survey/Form Layout (Standard)
+    // Polls look different (centered card) vs Surveys (full page form)
     const isPoll = survey.category === 'poll';
 
     return (
@@ -157,7 +173,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
                     )}
                 </div>
 
-                {/* Questions */}
+                {/* Questions List */}
                 <div className="space-y-8 animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
                     {survey.questions.map((q) => (
                         <div key={q.id} id={`question-${q.id}`}>
@@ -171,14 +187,14 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
                     ))}
                 </div>
 
-                {/* Footer Action */}
+                {/* Submit Button */}
                 <div className="pt-10 flex justify-center animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
                         className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-lg shadow-xl transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 disabled:opacity-70 disabled:cursor-not-allowed ${isPoll
-                                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-                                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
                             }`}
                     >
                         {isSubmitting ? 'Submitting...' : (isPoll ? 'Vote Now' : 'Submit Response')}

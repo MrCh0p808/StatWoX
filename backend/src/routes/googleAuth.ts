@@ -14,27 +14,38 @@ router.post('/', async (req, res) => {
     const googleRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
     const { email, name, sub } = googleRes.data;
 
-    let user = await prisma.user.findUnique({ where: { email } });
+    // MOCK MODE: Bypassing database for now
+    // let user = await prisma.user.findUnique({ where: { email } });
 
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email,
-          username: (name || "google_user").replace(/\s+/g, "") + "_" + (sub || "").slice(-5),
-          password: "GOOGLE_USER",
-        }
-      });
-    }
+    // In-memory mock user creation
+    const mockUser = {
+      id: `mock_google_${sub}`,
+      email,
+      username: name.replace(/\s+/g, "") + "_" + sub.slice(-5),
+      password: "GOOGLE_USER"
+    };
+
+    console.log(`[MOCK GOOGLE LOGIN] User: ${email}`);
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: mockUser.id, email: mockUser.email },
       process.env.JWT_SECRET!,
       { expiresIn: '1h' }
     );
 
     return res.json({ token });
-  } catch (error) {
+  } catch (error: any) {
     console.error("googleAuth error:", error?.response?.data ?? error);
+    // Even if Google fails (e.g. invalid token from localhost), let's allow login for dev testing if needed
+    // UNCOMMENT BELOW TO FORCE LOGIN ON ERROR FOR TESTING
+    /*
+    const token = jwt.sign(
+        { userId: 'mock_fallback_user', email: 'test@example.com' },
+        process.env.JWT_SECRET!,
+        { expiresIn: '1h' }
+    );
+    return res.json({ token });
+    */
     return res.status(500).json({ message: 'Google OAuth failed' });
   }
 });

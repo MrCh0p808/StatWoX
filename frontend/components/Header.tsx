@@ -42,11 +42,11 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout, notificat
                     </div>
                     {/* Desktop Spacer */}
                     <div className="hidden lg:flex lg:w-1/3"></div>
-                    
+
                     {/* Logo Container - Responsive Sizing */}
                     <div className="flex-1 flex justify-center lg:w-1/3">
                         <div className="h-8 lg:h-9 w-auto flex items-center justify-center">
-                            <Logo size="md" className="cursor-pointer select-none" />
+                            <Logo size="xs" className="cursor-pointer select-none" />
                         </div>
                     </div>
 
@@ -72,8 +72,8 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick, onLogout, notificat
                                             <div className="p-8 text-center text-gray-500 dark:text-gray-400 text-sm">No notifications yet.</div>
                                         ) : (
                                             notifications.map(notification => (
-                                                <div 
-                                                    key={notification.id} 
+                                                <div
+                                                    key={notification.id}
                                                     onClick={() => onMarkAsRead(notification.id)}
                                                     className={`px-4 py-3 border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer ${!notification.read ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : ''}`}
                                                 >

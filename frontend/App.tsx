@@ -12,12 +12,21 @@ import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import type { View, SurveyCategory, Notification } from './types';
 
 const App: React.FC = () => {
+  // Tracking if the user is logged in or not
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // This state tells us which "page" or view is currently active on the screen
   const [activeView, setActiveView] = useState<View>('feed');
+
+  // If we are in the builder, this tells us what kind of thing we are building (survey vs form)
   const [builderCategory, setBuilderCategory] = useState<SurveyCategory>('survey');
+
+  // If we are taking a survey or looking at analytics, this ID tells us which one
   const [activeSurveyId, setActiveSurveyId] = useState<string | null>(null);
+
+  // Controls whether the mobile sidebar is open or closed
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  
+
   // BACKEND NOTE: These notifications are currently hardcoded.
   // In a real app, you would fetch these from an endpoint like GET /api/notifications
   const [notifications, setNotifications] = useState<Notification[]>([
@@ -26,7 +35,8 @@ const App: React.FC = () => {
     { id: '3', title: 'System Update', message: 'StatWoX has been updated to v2.0. Check out the new features!', time: '1d ago', read: true, type: 'info' }
   ]);
 
-  // Check for existing login session on app load
+  // When the app loads, I check if there's a token saved in the browser.
+  // If there is, I assume the user is still logged in.
   useEffect(() => {
     const token = localStorage.getItem('statwox_token');
     if (token) {
@@ -34,37 +44,42 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Called when the Login component says "Success!"
   const handleLoginSuccess = (token: string) => {
     localStorage.setItem('statwox_token', token);
     setIsAuthenticated(true);
   };
 
+  // Called when the user clicks Logout
   const handleLogout = () => {
     localStorage.removeItem('statwox_token');
     setIsAuthenticated(false);
     setActiveView('feed');
   };
 
-  // Enhanced navigation handler to switch between different screens
+  // This is my main router. It switches the view and sets up any params needed.
   const handleNavigate = (view: View, param?: string | SurveyCategory) => {
     if (view === 'builder') {
-        setBuilderCategory((param as SurveyCategory) || 'survey');
+      setBuilderCategory((param as SurveyCategory) || 'survey');
     } else if (view === 'responder') {
-        setActiveSurveyId((param as string) || null);
+      setActiveSurveyId((param as string) || null);
     } else if (view === 'analytics') {
-        setActiveSurveyId((param as string) || null);
+      setActiveSurveyId((param as string) || null);
     }
     setActiveView(view);
   };
 
+  // Marking a single notification as read
   const handleMarkAsRead = (id: string) => {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
   };
 
+  // Marking all notifications as read
   const handleMarkAllAsRead = () => {
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
   };
 
+  // This function decides which component to show based on the activeView state
   const renderContent = () => {
     switch (activeView) {
       case 'surveys': return <MySurveys onNavigate={handleNavigate} />;
@@ -77,27 +92,28 @@ const App: React.FC = () => {
     }
   };
 
+  // If not logged in, show the Login screen instead of the app
   if (!isAuthenticated) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Views that take up the full screen (no sidebar/header)
+  // Some views (like taking a survey) should take up the whole screen without the sidebar
   const isFullscreenView = activeView === 'builder' || activeView === 'responder' || activeView === 'analytics';
 
   return (
     <div className={`h-screen w-full flex overflow-hidden text-gray-900 dark:text-white`}>
       {!isFullscreenView && (
-          <Sidebar activeView={activeView} setActiveView={handleNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
+        <Sidebar activeView={activeView} setActiveView={handleNavigate} isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
       )}
       <div className="flex-1 flex flex-col min-w-0 h-full">
         {!isFullscreenView && (
-            <Header 
-                onMenuClick={() => setIsSidebarOpen(true)} 
-                onLogout={handleLogout}
-                notifications={notifications}
-                onMarkAsRead={handleMarkAsRead}
-                onMarkAllAsRead={handleMarkAllAsRead}
-            />
+          <Header
+            onMenuClick={() => setIsSidebarOpen(true)}
+            onLogout={handleLogout}
+            notifications={notifications}
+            onMarkAsRead={handleMarkAsRead}
+            onMarkAllAsRead={handleMarkAllAsRead}
+          />
         )}
         <main className={`flex-1 overflow-y-auto hide-scrollbar bg-gray-200/50 dark:bg-transparent relative`}>
           <div key={activeView} className="fade-in min-h-full">
