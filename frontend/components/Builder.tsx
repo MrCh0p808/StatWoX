@@ -10,6 +10,7 @@ import { AtSymbolIcon } from './icons/AtSymbolIcon';
 import { EyeIcon } from './icons/EyeIcon';
 import { EyeOffIcon } from './icons/EyeOffIcon';
 import type { View, SurveyDraft, Question, QuestionType, SurveyCategory } from '../types';
+import { apiFetch } from '../utils/api';
 
 interface BuilderProps {
     category: SurveyCategory;
@@ -93,7 +94,7 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
             const newQuestions = [...prev.questions];
             const targetIndex = direction === 'up' ? index - 1 : index + 1;
             [newQuestions[index], newQuestions[targetIndex]] = [newQuestions[targetIndex], newQuestions[index]];
-            
+
             return { ...prev, questions: newQuestions };
         });
     };
@@ -101,11 +102,22 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
     // BACKEND NOTE: This is where you save the survey to your database.
     const handleSave = async () => {
         setIsSaving(true);
-        
-        // TODO: Replace this timeout with a POST request to your backend.
-        // Example: await fetch('/api/surveys', { method: 'POST', body: JSON.stringify(draft) ... })
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
+
+        try {
+            const response = await apiFetch('/surveys', {
+                method: 'POST',
+                body: JSON.stringify(draft)
+            });
+
+            if (!response.ok) throw new Error("Failed to save survey");
+
+        } catch (err) {
+            console.error(err);
+            alert("Failed to save survey");
+            setIsSaving(false);
+            return;
+        }
+
         setIsSaving(false);
         alert(`${category === 'poll' ? 'Poll Launched' : 'Saved'} Successfully!`);
         onNavigate('surveys');
@@ -128,7 +140,7 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
                     </button>
                     <div className="w-px bg-gray-300 dark:bg-gray-600 my-1 mx-1 h-6"></div>
                     <button onClick={() => addQuestion('yesNo')} className="flex items-center px-5 py-2.5 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                         <CheckIcon className="w-4 h-4 mr-2 text-indigo-500" />Yes / No
+                        <CheckIcon className="w-4 h-4 mr-2 text-indigo-500" />Yes / No
                     </button>
                 </>
             );
@@ -138,17 +150,17 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
                     <button onClick={() => addQuestion('shortText')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
                         <PlusIcon className="w-3 h-3 mr-1 text-indigo-500" />Text
                     </button>
-                     <button onClick={() => addQuestion('email')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                    <button onClick={() => addQuestion('email')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
                         <AtSymbolIcon className="w-3 h-3 mr-1 text-indigo-500" />Email
                     </button>
-                     <button onClick={() => addQuestion('phoneNumber')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                    <button onClick={() => addQuestion('phoneNumber')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
                         <PhoneIcon className="w-3 h-3 mr-1 text-indigo-500" />Phone
                     </button>
                     <button onClick={() => addQuestion('multipleChoice')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
                         <DocumentTextIcon className="w-3 h-3 mr-1 text-indigo-500" />Select
                     </button>
-                     <button onClick={() => addQuestion('date')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
-                         <svg className="w-3 h-3 mr-1 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                    <button onClick={() => addQuestion('date')} className="flex items-center px-4 py-2.5 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors">
+                        <svg className="w-3 h-3 mr-1 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
                         Date
                     </button>
                 </>
@@ -188,20 +200,20 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
             {/* Top Bar */}
             <div className="sticky top-0 z-30 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 shadow-sm transition-all">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <button 
+                    <button
                         onClick={() => onNavigate('surveys')}
                         className="flex items-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors py-2 px-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                         <ArrowLeftIcon className="mr-2 w-5 h-5" />
                         <span className="hidden sm:inline font-bold">Back</span>
                     </button>
-                    
+
                     <div className="flex items-center space-x-2 sm:space-x-4">
-                        <button 
+                        <button
                             onClick={() => setIsPreview(!isPreview)}
                             className={`flex items-center px-4 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${isPreview ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
                         >
-                            {isPreview ? <EyeOffIcon className="w-4 h-4 mr-2"/> : <EyeIcon className="w-4 h-4 mr-2"/>}
+                            {isPreview ? <EyeOffIcon className="w-4 h-4 mr-2" /> : <EyeIcon className="w-4 h-4 mr-2" />}
                             {isPreview ? 'Edit' : 'Preview'}
                         </button>
 
@@ -237,13 +249,13 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
                             <input
                                 type="text"
                                 value={draft.title}
-                                onChange={(e) => setDraft(prev => ({...prev, title: e.target.value}))}
+                                onChange={(e) => setDraft(prev => ({ ...prev, title: e.target.value }))}
                                 placeholder={category === 'poll' ? "Poll Question" : "Survey Title"}
                                 className="block w-full border-0 border-b-2 border-gray-100 dark:border-gray-700 bg-transparent py-2 px-0 text-4xl font-black text-gray-900 dark:text-white placeholder-gray-300 focus:border-indigo-500 focus:ring-0 transition-colors"
                             />
                             <textarea
                                 value={draft.description}
-                                onChange={(e) => setDraft(prev => ({...prev, description: e.target.value}))}
+                                onChange={(e) => setDraft(prev => ({ ...prev, description: e.target.value }))}
                                 placeholder="Description (Optional)"
                                 rows={category === 'poll' ? 1 : 2}
                                 className="mt-6 block w-full border-0 border-b border-gray-100 dark:border-gray-700 bg-transparent py-2 px-0 text-lg text-gray-600 dark:text-gray-300 placeholder-gray-400 focus:border-indigo-500 focus:ring-0 resize-none transition-colors font-medium"

@@ -20,7 +20,7 @@ interface CreationCardProps {
 }
 
 const CreationCard: React.FC<CreationCardProps> = ({ title, description, icon, onClick, colorClass }) => (
-    <button 
+    <button
         onClick={onClick}
         className={`group w-full text-left p-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-white/10 rounded-3xl transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-xl ${colorClass}`}
     >
@@ -52,7 +52,6 @@ export const MySurveys: React.FC<MySurveysProps> = ({ onNavigate }) => {
 
                 // BACKEND NOTE: This is where you should call your real API.
                 // Uncomment the code below when your backend is ready.
-                /*
                 const response = await fetch(`${API_BASE_URL}/api/surveys`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
@@ -62,21 +61,8 @@ export const MySurveys: React.FC<MySurveysProps> = ({ onNavigate }) => {
                 }
                 const data = await response.json();
                 setSurveys(data);
-                */
 
-                // BACKEND NOTE: This block below simulates a delay and returns fake data.
-                // Delete this whole block when you connect your real database.
-                await new Promise(resolve => setTimeout(resolve, 600));
 
-                const mockMySurveys: Survey[] = [
-                    { id: '101', title: 'Customer Satisfaction 2024', responses: 128, status: 'Published', author: 'You', category: 'survey' },
-                    { id: '105', title: 'Annual Tech Conference Registration', responses: 45, status: 'Published', author: 'You', category: 'form' },
-                    { id: '301', title: 'Office Lunch Preferences', responses: 12, status: 'Published', author: 'You', category: 'poll' },
-                    { id: 'draft-1', title: 'Q3 Employee Feedback', responses: 0, status: 'Draft', author: 'You', category: 'survey' },
-                    { id: 'draft-2', title: 'Beta Tester Signup', responses: 0, status: 'Draft', author: 'You', category: 'form' }
-                ];
-
-                setSurveys(mockMySurveys);
 
             } catch (err: any) {
                 setError(err.message);
@@ -129,7 +115,7 @@ export const MySurveys: React.FC<MySurveysProps> = ({ onNavigate }) => {
 
                 {/* Content Area */}
                 {isLoading && <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div></div>}
-                
+
                 {error && (
                     <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-6 text-center">
                         <p className="text-red-600 dark:text-red-400 font-bold">{error}</p>
@@ -156,13 +142,13 @@ export const MySurveys: React.FC<MySurveysProps> = ({ onNavigate }) => {
                 )}
 
                 {!isLoading && !error && surveys.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
-                      {surveys.map(survey => (
-                          <div key={survey.id} onClick={() => handleSurveyClick(survey.id)} className="h-full">
-                              <SurveyCard survey={survey} />
-                          </div>
-                      ))}
-                  </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in-up">
+                        {surveys.map(survey => (
+                            <div key={survey.id} onClick={() => handleSurveyClick(survey.id)} className="h-full">
+                                <SurveyCard survey={survey} />
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
 
@@ -170,34 +156,34 @@ export const MySurveys: React.FC<MySurveysProps> = ({ onNavigate }) => {
             {isCreateModalOpen && (
                 <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-opacity duration-300">
                     <div className="bg-white dark:bg-gray-900 border border-white/20 dark:border-gray-700 rounded-3xl w-full max-w-3xl p-10 relative shadow-2xl ring-1 ring-black/5 transform transition-all scale-100">
-                        <button 
-                            onClick={() => setIsCreateModalOpen(false)} 
+                        <button
+                            onClick={() => setIsCreateModalOpen(false)}
                             className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                         >
                             <XIcon />
                         </button>
                         <h2 className="text-3xl font-black mb-3 text-center text-gray-900 dark:text-white">Create New</h2>
                         <p className="text-center text-gray-500 dark:text-gray-400 mb-10 text-lg font-medium">Select the type of content you want to build</p>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <CreationCard 
-                                title="Form" 
-                                description="Registration & data collection." 
-                                icon={<DocumentTextIcon className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-0" />} 
+                            <CreationCard
+                                title="Form"
+                                description="Registration & data collection."
+                                icon={<DocumentTextIcon className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-0" />}
                                 onClick={() => handleCreateStart('form')}
                                 colorClass="hover:shadow-blue-500/20 hover:border-blue-200 dark:hover:border-blue-800"
                             />
-                            <CreationCard 
-                                title="Survey" 
-                                description="Research & deep feedback." 
-                                icon={<svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>} 
+                            <CreationCard
+                                title="Survey"
+                                description="Research & deep feedback."
+                                icon={<svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>}
                                 onClick={() => handleCreateStart('survey')}
                                 colorClass="hover:shadow-purple-500/20 hover:border-purple-200 dark:hover:border-purple-800"
                             />
-                            <CreationCard 
-                                title="Poll" 
-                                description="Quick single-question vote." 
-                                icon={<svg className="w-8 h-8 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>} 
+                            <CreationCard
+                                title="Poll"
+                                description="Quick single-question vote."
+                                icon={<svg className="w-8 h-8 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
                                 onClick={() => handleCreateStart('poll')}
                                 colorClass="hover:shadow-pink-500/20 hover:border-pink-200 dark:hover:border-pink-800"
                             />

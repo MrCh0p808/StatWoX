@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 import { SurveyCard } from './SurveyCard';
 import { mockPublicSurveys } from '../constants';
 import type { HomeFeedTab, Survey, View } from '../types';
@@ -38,11 +39,33 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onNavigate }) => {
         }
     };
 
+    const [featured, setFeatured] = useState<Survey[]>([]);
+    const [trending, setTrending] = useState<Survey[]>([]);
+    const [quickPolls, setQuickPolls] = useState<Survey[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const loadFeed = async () => {
+            try {
+                const data = await apiFetch('/feed');
+                setFeatured(data.featured || []);
+                setTrending(data.trending || []);
+                setQuickPolls(data.quickPolls || []);
+            } catch (err) {
+                console.error("Failed to load feed", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        loadFeed();
+    }, []);
+
     const renderContent = () => {
+        if (loading) return <div className="text-center py-10">Loading...</div>;
         switch (activeTab) {
-            case 'featured': return <FeedRow surveys={mockPublicSurveys.featured} onSelect={handleSurveyClick} />;
-            case 'trending': return <FeedRow surveys={mockPublicSurveys.trending} onSelect={handleSurveyClick} />;
-            case 'quickPolls': return <FeedRow surveys={mockPublicSurveys.quickPolls} onSelect={handleSurveyClick} />;
+            case 'featured': return <FeedRow surveys={featured} onSelect={handleSurveyClick} />;
+            case 'trending': return <FeedRow surveys={trending} onSelect={handleSurveyClick} />;
+            case 'quickPolls': return <FeedRow surveys={quickPolls} onSelect={handleSurveyClick} />;
             default: return null;
         }
     };
@@ -54,7 +77,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onNavigate }) => {
                     <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight">Home Feed</h1>
                     <p className="mt-2 text-base text-gray-500 dark:text-gray-400 font-medium">Discover popular surveys and trending polls.</p>
                 </div>
-                
+
                 <div className="w-full max-w-lg lg:max-w-md">
                     <label htmlFor="search" className="sr-only">Search</label>
                     <div className="relative text-gray-500 dark:text-gray-400 focus-within:text-indigo-500 dark:focus-within:text-indigo-400">

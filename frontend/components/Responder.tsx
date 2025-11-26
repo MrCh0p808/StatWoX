@@ -22,50 +22,17 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
         // BACKEND NOTE: Fetch the specific survey by ID from your database.
         const fetchSurvey = async () => {
             setIsLoading(true);
-            
-            // MOCK DATA GENERATION LOGIC (Delete this when backend is connected)
-            await new Promise(resolve => setTimeout(resolve, 800));
-            
-            // This logic just creates fake data so you can see the UI work.
-            // Replace it with: const res = await fetch(`/api/surveys/${surveyId}`);
-            
-            let mockCategory: SurveyCategory = 'survey';
-            let mockTitle = "Untitled Survey";
-            let mockQuestions: Question[] = [];
 
-            if (surveyId?.startsWith('3')) {
-                mockCategory = 'poll';
-                mockTitle = surveyId === '301' ? 'Tabs vs. Spaces?' : 'Quick Poll';
-                mockQuestions = [
-                    { id: 'q1', type: 'multipleChoice', title: 'Which do you prefer?', required: true, options: ['Tabs', 'Spaces'] }
-                ];
-            } else if (surveyId === '101') {
-                mockCategory = 'survey';
-                mockTitle = 'Community Gaming Habits';
-                mockQuestions = [
-                    { id: 'q1', type: 'multipleChoice', title: 'What platform do you play on most?', required: true, options: ['PC', 'Console', 'Mobile'] },
-                    { id: 'q2', type: 'rating', title: 'How would you rate the current state of gaming?', required: true },
-                    { id: 'q3', type: 'longText', title: 'What is your favorite game of all time?', required: false }
-                ];
-            } else {
-                // Default Form/Survey
-                mockCategory = 'form';
-                mockTitle = 'Feedback Form';
-                mockQuestions = [
-                    { id: 'q1', type: 'shortText', title: 'Full Name', required: true },
-                    { id: 'q2', type: 'email', title: 'Email Address', required: true },
-                    { id: 'q3', type: 'longText', title: 'Your Feedback', required: true }
-                ];
+            try {
+                const res = await fetch(`/api/surveys/${surveyId}`);
+                if (!res.ok) throw new Error("Survey not found");
+                const data = await res.json();
+                setSurvey(data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setIsLoading(false);
             }
-
-            setSurvey({
-                id: surveyId || 'mock-id',
-                category: mockCategory,
-                title: mockTitle,
-                description: 'Please fill out the following questions. Your feedback is appreciated.',
-                questions: mockQuestions
-            });
-            setIsLoading(false);
         };
 
         fetchSurvey();
@@ -107,11 +74,22 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
         }
 
         setIsSubmitting(true);
-        
-        // BACKEND NOTE: Send the 'answers' object to your backend here.
-        // Example: await fetch(`/api/surveys/${surveyId}/responses`, { method: 'POST', body: JSON.stringify(answers) })
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
+
+        try {
+            const res = await fetch(`/api/surveys/${surveyId}/responses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ answers })
+            });
+
+            if (!res.ok) throw new Error("Failed to submit");
+
+        } catch (err) {
+            alert("Error submitting response");
+            setIsSubmitting(false);
+            return;
+        }
+
         setIsSubmitting(false);
         setIsCompleted(true);
     };
@@ -156,7 +134,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
             {/* Navigation Header - Only show for non-polls or if back navigation is needed */}
             <div className={`fixed top-0 left-0 right-0 z-10 p-4 ${isPoll ? '' : 'bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-xl border-b border-gray-200 dark:border-white/10 transition-all'}`}>
                 <div className="max-w-3xl mx-auto">
-                    <button 
+                    <button
                         onClick={() => onNavigate('feed')}
                         className="flex items-center text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 font-bold"
                     >
@@ -198,11 +176,10 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
                     <button
                         onClick={handleSubmit}
                         disabled={isSubmitting}
-                        className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-lg shadow-xl transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 disabled:opacity-70 disabled:cursor-not-allowed ${
-                            isPoll 
-                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white' 
-                            : 'bg-indigo-600 hover:bg-indigo-500 text-white'
-                        }`}
+                        className={`w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-lg shadow-xl transition-all transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 disabled:opacity-70 disabled:cursor-not-allowed ${isPoll
+                                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
+                                : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                            }`}
                     >
                         {isSubmitting ? 'Submitting...' : (isPoll ? 'Vote Now' : 'Submit Response')}
                     </button>

@@ -24,12 +24,42 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // BACKEND NOTE: This bypasses the backend for testing.
-    // You should remove or disable this button in production.
-    const handleAdminLogin = () => {
-        const mockToken = "mock-admin-token-" + Date.now();
-        onLoginSuccess(mockToken);
+    React.useEffect(() => {
+        // @ts-ignore
+        if (window.google) {
+            // @ts-ignore
+            window.google.accounts.id.initialize({
+                client_id: "YOUR_GOOGLE_CLIENT_ID", // Replace with env var if available
+                callback: handleGoogleCallback
+            });
+            // @ts-ignore
+            window.google.accounts.id.renderButton(
+                document.getElementById("google-btn"),
+                { theme: "outline", size: "large", width: "100%" }
+            );
+        }
+    }, []);
+
+    const handleGoogleCallback = async (response: any) => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential }),
+            });
+            const data = await res.json();
+            if (data.token) {
+                onLoginSuccess(data.token);
+            } else {
+                setError("Google Login Failed");
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Google Login Failed");
+        }
     };
+
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,19 +74,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             return;
         }
 
-        // Hardcoded demo credentials for testing without a backend
-        if (isLogin && formData.email === 'demo@statwox.com' && formData.password === 'password') {
-            setTimeout(() => {
-                onLoginSuccess('mock-demo-user-token');
-                setIsLoading(false);
-            }, 800);
-            return;
-        }
+
 
         // BACKEND NOTE: This determines which endpoint to hit.
         // Make sure your backend has routes for POST /api/auth/login and POST /api/auth/register
         const endpoint = isLogin ? '/login' : '/register';
-        
+
         // Prepare the data to send to the server
         const payload = isLogin
             ? { email: formData.email, password: formData.password }
@@ -83,6 +106,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 setIsLogin(true);
             }
         } catch (err: any) {
+            console.error("Login Error:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
@@ -104,17 +128,17 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     </h2>
                     {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3"><p className="text-center text-sm font-medium text-red-600">{error}</p></div>}
                     {successMessage && <div className="bg-green-50 border border-green-100 rounded-xl p-3"><p className="text-center text-sm font-medium text-green-600">{successMessage}</p></div>}
-                    
+
                     <form className="space-y-5" onSubmit={handleSubmit}>
                         {!isLogin && (
                             <div>
                                 <label className={labelClasses}>Username</label>
-                                <input 
-                                    type="text" 
-                                    name="username" 
-                                    value={formData.username} 
-                                    onChange={handleInputChange} 
-                                    required 
+                                <input
+                                    type="text"
+                                    name="username"
+                                    value={formData.username}
+                                    onChange={handleInputChange}
+                                    required
                                     className={inputClasses}
                                     placeholder="johndoe"
                                 />
@@ -122,12 +146,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         )}
                         <div>
                             <label className={labelClasses}>Email address</label>
-                            <input 
-                                type="email" 
-                                name="email" 
-                                value={formData.email} 
-                                onChange={handleInputChange} 
-                                required 
+                            <input
+                                type="email"
+                                name="email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                required
                                 className={inputClasses}
                                 placeholder="you@example.com"
                             />
@@ -135,12 +159,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         <div>
                             <label className={labelClasses}>Password</label>
                             <div className="relative">
-                                <input 
-                                    type={showPassword ? "text" : "password"} 
-                                    name="password" 
-                                    value={formData.password} 
-                                    onChange={handleInputChange} 
-                                    required 
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleInputChange}
+                                    required
                                     className={inputClasses + " pr-10"}
                                     placeholder="••••••••"
                                 />
@@ -157,12 +181,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             <div>
                                 <label className={labelClasses}>Confirm Password</label>
                                 <div className="relative">
-                                    <input 
-                                        type={showConfirmPassword ? "text" : "password"} 
-                                        name="confirmPassword" 
-                                        value={formData.confirmPassword} 
-                                        onChange={handleInputChange} 
-                                        required 
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        name="confirmPassword"
+                                        value={formData.confirmPassword}
+                                        onChange={handleInputChange}
+                                        required
                                         className={inputClasses + " pr-10"}
                                         placeholder="••••••••"
                                     />
@@ -176,9 +200,9 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                                 </div>
                             </div>
                         )}
-                        <button 
-                            type="submit" 
-                            disabled={isLoading} 
+                        <button
+                            type="submit"
+                            disabled={isLoading}
                             className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg shadow-indigo-500/30 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform active:scale-95 hover:-translate-y-0.5"
                         >
                             {isLoading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
@@ -194,30 +218,16 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <button className="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none transition-all transform hover:-translate-y-0.5">
-                            <GoogleIcon className="w-5 h-5 mr-2" />
-                            <span>Google</span>
-                        </button>
-                        <button className="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm bg-white dark:bg-gray-800 text-sm font-bold text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none transition-all transform hover:-translate-y-0.5">
-                            <PhoneIcon className="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" />
-                            <span>Phone</span>
-                        </button>
+                    <div className="flex justify-center">
+                        <div id="google-btn"></div>
                     </div>
 
-                     <div className="mt-4">
-                        <button
-                            onClick={handleAdminLogin}
-                            className="w-full inline-flex justify-center items-center py-3 px-4 border border-dashed border-indigo-300 dark:border-indigo-400/30 rounded-xl shadow-sm bg-indigo-50 dark:bg-indigo-500/10 text-sm font-bold text-indigo-600 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 focus:outline-none transition-colors"
-                        >
-                           <span>⚡ Developer Admin Access</span>
-                        </button>
-                    </div>
+
 
                     <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-6">
                         {isLogin ? "Don't have an account?" : "Already have an account?"}
-                        <button 
-                            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }} 
+                        <button
+                            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMessage(''); }}
                             className="font-bold text-indigo-600 dark:text-blue-300 hover:text-indigo-500 dark:hover:text-white ml-1 transition-colors hover:underline focus:outline-none"
                         >
                             {isLogin ? 'Sign up' : 'Sign in'}

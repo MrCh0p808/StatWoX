@@ -7,42 +7,89 @@ export const getAnalytics = async (req: Request, res: Response) => {
   try {
     const surveyId = req.params.id;
 
-    // total responses
-    const totalResponses = await prisma.surveyResponse.count({ where: { surveyId } });
-
-    // basic per-question aggregation (for multipleChoice)
-    const questions = await prisma.question.findMany({
-      where: { surveyId },
-      include: { options: true }
+    // Fetch survey with questions
+    const survey = await prisma.survey.findUnique({
+      where: { id: surveyId },
+      include: { questions: { include: { options: true }, orderBy: { order: 'asc' } } }
     });
 
-    // load all responses payloads for simple aggregation (ok for small volumes)
+    if (!survey) return res.status(404).json({ message: "Survey not found" });
+
+    // Fetch all responses
     const responses = await prisma.surveyResponse.findMany({
       where: { surveyId },
-      select: { payload: true }
+      orderBy: { submittedAt: 'desc' }
     });
 
-    const questionStats = questions.map(q => {
-      if (q.type === "multipleChoice") {
+    const totalResponses = responses.length;
+
+    // Process questions
+    const questions = survey.questions.map(q => {
+      const qStats: any = {
+        id: q.id,
+        type: q.type,
+        title: q.text,
+        required: q.required,
+      };
+
+      if (q.type === 'multipleChoice' || q.type === 'rating' || q.type === 'yesNo') {
         const counts: Record<string, number> = {};
-        q.options.forEach((o: any) => (counts[o.text] = 0));
+        // Initialize counts for options if available
+        q.options.forEach(o => counts[o.text] = 0);
+
         responses.forEach(r => {
-          const ans = r.payload?.answers?.[q.id];
+          const ans = (r.payload as any)?.answers?.[q.id];
           if (ans) {
             if (Array.isArray(ans)) {
-              ans.forEach((a: string) => counts[a] = (counts[a]||0) + 1);
+              ans.forEach((a: string) => counts[a] = (counts[a] || 0) + 1);
             } else {
               counts[ans] = (counts[ans] || 0) + 1;
             }
           }
         });
-        return { questionId: q.id, type: q.type, stats: counts };
+
+        qStats.stats = Object.entries(counts).map(([label, count]) => ({
+          label,
+          count,
+          percentage: totalResponses > 0 ? Math.round((count / totalResponses) * 100) : 0
+        }));
       } else {
-        return { questionId: q.id, type: q.type };
+        // Text questions - collect recent answers
+        qStats.recentAnswers = responses
+          .map(r => (r.payload as any)?.answers?.[q.id])
+          .filter(a => a)
+          .slice(0, 5);
       }
+
+      return qStats;
     });
 
-    return res.json({ surveyId, totalResponses, questionStats });
+    // Format individual responses for the table
+    const individualResponses = responses.map((r, i) => {
+      const flat: any = {
+        id: r.id.slice(0, 8), // Short ID
+        date: new Date(r.submittedAt).toLocaleDateString(),
+        status: 'Completed', // Mock status
+      };
+      // Add first few answers for the table columns
+      survey.questions.slice(0, 3).forEach((q, idx) => {
+        const val = (r.payload as any)?.answers?.[q.id];
+        flat[`q${idx + 1}`] = Array.isArray(val) ? val.join(', ') : (val || '-');
+      });
+      return flat;
+    });
+
+    const analyticsData = {
+      id: survey.id,
+      title: survey.title,
+      totalResponses,
+      completionRate: 100, // Mock for now
+      avgTime: '1m 30s', // Mock for now
+      questions,
+      individualResponses
+    };
+
+    return res.json(analyticsData);
   } catch (err: any) {
     console.error("getAnalytics:", err);
     return res.status(500).json({ message: "Server error" });

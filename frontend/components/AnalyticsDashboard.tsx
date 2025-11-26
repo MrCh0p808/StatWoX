@@ -8,6 +8,7 @@ import { TableCellsIcon } from './icons/TableCellsIcon';
 import { ShareIcon } from './icons/ShareIcon';
 import { ShareModal } from './ShareModal';
 import { DocumentTextIcon } from './icons/DocumentTextIcon';
+import { apiFetch } from '../utils/api';
 
 interface AnalyticsDashboardProps {
     surveyId: string | null;
@@ -38,79 +39,21 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ surveyId
     const [isShareOpen, setIsShareOpen] = useState(false);
 
     useEffect(() => {
-        const generateMockData = async () => {
+        const loadAnalytics = async () => {
+            if (!surveyId) return;
             setIsLoading(true);
-            await new Promise(resolve => setTimeout(resolve, 800)); // Simulate network
-
-            // BACKEND NOTE: The code below generates fake numbers based on the ID.
-            // You need to replace ALL of this with a real API call.
-            // Example: const response = await fetch(`/api/surveys/${surveyId}/analytics`);
-            
-            const mockTotal = surveyId ? (parseInt(surveyId) * 12) + 45 : 124;
-            
-            const mockQuestions: AnalyticsQuestion[] = [
-                { 
-                    id: 'q1', 
-                    type: 'multipleChoice', 
-                    title: 'How satisfied are you with our service?', 
-                    required: true,
-                    stats: [
-                        { label: 'Very Satisfied', count: Math.floor(mockTotal * 0.6), percentage: 60 },
-                        { label: 'Satisfied', count: Math.floor(mockTotal * 0.25), percentage: 25 },
-                        { label: 'Neutral', count: Math.floor(mockTotal * 0.1), percentage: 10 },
-                        { label: 'Dissatisfied', count: Math.floor(mockTotal * 0.05), percentage: 5 }
-                    ]
-                },
-                {
-                    id: 'q2',
-                    type: 'rating',
-                    title: 'Rate your experience',
-                    required: true,
-                    stats: [
-                        { label: '5 Stars', count: Math.floor(mockTotal * 0.5), percentage: 50 },
-                        { label: '4 Stars', count: Math.floor(mockTotal * 0.3), percentage: 30 },
-                        { label: '3 Stars', count: Math.floor(mockTotal * 0.15), percentage: 15 },
-                        { label: '2 Stars', count: Math.floor(mockTotal * 0.03), percentage: 3 },
-                        { label: '1 Star', count: Math.floor(mockTotal * 0.02), percentage: 2 }
-                    ]
-                },
-                {
-                    id: 'q3',
-                    type: 'shortText',
-                    title: 'Any additional feedback?',
-                    required: false,
-                    recentAnswers: [
-                        "Great service, loved the UI!",
-                        "Needs more color options.",
-                        "Fast and responsive.",
-                        "I had trouble logging in initially.",
-                        "Will recommend to friends."
-                    ]
-                }
-            ];
-
-            const mockTableData = Array.from({ length: 10 }).map((_, i) => ({
-                id: `resp-${i}`,
-                date: new Date(Date.now() - i * 86400000).toLocaleDateString(),
-                status: 'Completed',
-                q1: i % 2 === 0 ? 'Very Satisfied' : 'Satisfied',
-                q2: 5 - (i % 3),
-                q3: i % 3 === 0 ? 'Great service!' : '-'
-            }));
-
-            setData({
-                id: surveyId || 'unknown',
-                title: surveyId === '301' ? 'Tabs vs. Spaces?' : 'Customer Feedback Survey',
-                totalResponses: mockTotal,
-                completionRate: 87,
-                avgTime: '2m 14s',
-                questions: mockQuestions,
-                individualResponses: mockTableData
-            });
-            setIsLoading(false);
+            try {
+                const result = await apiFetch(`/surveys/${surveyId}/analytics`);
+                setData(result);
+            } catch (err) {
+                console.error("Failed to load analytics", err);
+                setData(null);
+            } finally {
+                setIsLoading(false);
+            }
         };
 
-        generateMockData();
+        loadAnalytics();
     }, [surveyId]);
 
     const handleExport = () => {
@@ -146,7 +89,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ surveyId
         return (
             <div className="min-h-full flex items-center justify-center">
                 <div className="text-center p-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-3xl border border-gray-200 dark:border-gray-700 shadow-xl">
-                     <div className="mx-auto h-20 w-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
+                    <div className="mx-auto h-20 w-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mb-6">
                         <DocumentTextIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                     </div>
                     <h3 className="text-xl font-black text-gray-900 dark:text-white">No Data Found</h3>
@@ -164,7 +107,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ surveyId
                 <div className="sticky top-0 z-30 bg-white/90 dark:bg-[#0f172a]/90 backdrop-blur-md border-b border-gray-200/50 dark:border-white/10 shadow-sm transition-all">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
                         <div className="flex items-center min-w-0">
-                            <button 
+                            <button
                                 onClick={() => onNavigate('surveys')}
                                 className="mr-4 p-2.5 rounded-xl text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                             >
@@ -175,16 +118,16 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ surveyId
                                 <p className="text-sm text-gray-500 dark:text-gray-400 font-bold">Analytics & Reports</p>
                             </div>
                         </div>
-                        
+
                         <div className="flex items-center space-x-3">
-                            <button 
+                            <button
                                 onClick={() => setIsShareOpen(true)}
                                 className="flex items-center px-5 py-2.5 border border-indigo-600 dark:border-indigo-500 rounded-xl text-sm font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 shadow-sm transition-all active:scale-95"
                             >
                                 <ShareIcon className="w-5 h-5 sm:w-4 sm:h-4 sm:mr-2" />
                                 <span className="hidden sm:inline">Share</span>
                             </button>
-                            <button 
+                            <button
                                 onClick={handleExport}
                                 className="flex items-center px-5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm transition-all active:scale-95"
                             >
@@ -223,22 +166,20 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ surveyId
                         <nav className="-mb-px flex space-x-8">
                             <button
                                 onClick={() => setActiveTab('overview')}
-                                className={`flex items-center py-4 px-2 border-b-4 font-bold text-sm transition-all ${
-                                    activeTab === 'overview'
+                                className={`flex items-center py-4 px-2 border-b-4 font-bold text-sm transition-all ${activeTab === 'overview'
                                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <ChartBarIcon className="w-5 h-5 mr-2" />
                                 Overview
                             </button>
                             <button
                                 onClick={() => setActiveTab('responses')}
-                                className={`flex items-center py-4 px-2 border-b-4 font-bold text-sm transition-all ${
-                                    activeTab === 'responses'
+                                className={`flex items-center py-4 px-2 border-b-4 font-bold text-sm transition-all ${activeTab === 'responses'
                                     ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <TableCellsIcon className="w-5 h-5 mr-2" />
                                 Individual Responses
@@ -266,8 +207,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({ surveyId
                                                             <span className="text-gray-500 dark:text-gray-400 font-bold">{stat.count} ({stat.percentage}%)</span>
                                                         </div>
                                                         <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-4 overflow-hidden shadow-inner">
-                                                            <div 
-                                                                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-4 rounded-full transition-all duration-1000 ease-out shadow-md" 
+                                                            <div
+                                                                className="bg-gradient-to-r from-indigo-500 to-purple-500 h-4 rounded-full transition-all duration-1000 ease-out shadow-md"
                                                                 style={{ width: `${stat.percentage}%` }}
                                                             ></div>
                                                         </div>

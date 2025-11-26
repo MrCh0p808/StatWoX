@@ -9,14 +9,18 @@ import googleAuth from './routes/googleAuth.js';
 // Load environment variables
 dotenv.config();
 
-const allowedOrigin = process.env.ALLOWED_ORIGIN || "*";
+const allowedOrigin = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    process.env.ALLOWED_ORIGIN
+].filter(Boolean);
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: allowedOrigin,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  credentials: true,
+    origin: allowedOrigin,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
 }));
 // Enable Cross-Origin Resource Sharing
 app.use(express.json()); // Enable JSON body parsing

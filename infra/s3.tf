@@ -43,10 +43,10 @@ resource "aws_s3_bucket_policy" "frontend" {
 
 locals {
   frontend_dist_dir = "${path.module}/../frontend/dist"
-  frontend_files    = fileset(local.frontend_dist_dir, "**")
+  frontend_files    = setsubtract(fileset(local.frontend_dist_dir, "**"), ["config.js"])
 }
 
-resource "aws_s3_bucket_object" "frontend_dist" {
+resource "aws_s3_object" "frontend_dist" {
   for_each = { for f in local.frontend_files : f => f }
 
   bucket = aws_s3_bucket.frontend.id
