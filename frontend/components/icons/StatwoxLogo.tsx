@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface IconProps {
-  className?: string;
+    className?: string;
 }
 
 export const StatwoxLogo: React.FC<IconProps> = ({ className = "h-10 w-auto" }) => {
@@ -16,11 +16,13 @@ export const StatwoxLogo: React.FC<IconProps> = ({ className = "h-10 w-auto" }) 
     }
 
     return (
-        <img 
-            src="/logo.png" 
-            alt="StatWoX" 
-            className={`${className} object-contain max-w-full`}
+        <img
+            src="/logo.png"
+            alt="StatWoX"
+            className={`${className} object-contain max-w-full pointer-events-none select-none`}
             onError={() => setImgError(true)}
+            onContextMenu={(e) => e.preventDefault()}
+            draggable={false}
         />
     );
 };

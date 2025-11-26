@@ -59,4 +59,17 @@ router.post("/login", async (req, res) => {
   }
 });
 
+
+
+/**
+ * POST /api/auth/otp/send
+ */
+import { sendOtp, verifyOtp } from "../controllers/otp.js";
+router.post("/otp/send", sendOtp);
+
+/**
+ * POST /api/auth/otp/verify
+ */
+router.post("/otp/verify", verifyOtp);
+
 export default router;

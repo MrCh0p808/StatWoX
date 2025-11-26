@@ -6,20 +6,30 @@ import type { HomeFeedTab, Survey, View } from '../types';
 import { SearchIcon } from './icons/SearchIcon';
 
 // Update FeedRow to accept onNavigate
-const FeedRow: React.FC<{ surveys: Survey[], onSelect: (id: string) => void }> = ({ surveys, onSelect }) => (
-    <div className="relative md:pl-2 lg:pl-0">
-        <div className="grid grid-cols-1 gap-6 md:flex md:overflow-x-auto md:space-x-6 md:pb-6 md:scroll-smooth hide-scrollbar md:[scroll-snap-type:x_mandatory]">
-            <div className="hidden md:block md:flex-shrink-0 md:w-2 lg:w-0"></div>
-            {surveys.map(survey => (
-                <div key={survey.id} className="md:w-80 md:flex-shrink-0 md:[scroll-snap-align:start]" onClick={() => onSelect(survey.id)}>
-                    <SurveyCard survey={survey} />
-                </div>
-            ))}
-            <div className="hidden md:block md:flex-shrink-0 md:w-2 lg:w-0"></div>
+const FeedRow: React.FC<{ surveys: Survey[], onSelect: (id: string) => void }> = ({ surveys, onSelect }) => {
+    if (surveys.length === 0) {
+        return (
+            <div className="text-center py-12 bg-white/50 dark:bg-gray-800/50 rounded-2xl border border-dashed border-gray-300 dark:border-gray-700">
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No surveys found in this category yet.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Check back later or create your own!</p>
+            </div>
+        );
+    }
+    return (
+        <div className="relative md:pl-2 lg:pl-0">
+            <div className="grid grid-cols-1 gap-6 md:flex md:overflow-x-auto md:space-x-6 md:pb-6 md:scroll-smooth hide-scrollbar md:[scroll-snap-type:x_mandatory]">
+                <div className="hidden md:block md:flex-shrink-0 md:w-2 lg:w-0"></div>
+                {surveys.map(survey => (
+                    <div key={survey.id} className="md:w-80 md:flex-shrink-0 md:[scroll-snap-align:start]" onClick={() => onSelect(survey.id)}>
+                        <SurveyCard survey={survey} />
+                    </div>
+                ))}
+                <div className="hidden md:block md:flex-shrink-0 md:w-2 lg:w-0"></div>
+            </div>
+            <div className="absolute top-0 right-0 bottom-6 w-16 bg-gradient-to-l from-gray-200/50 dark:from-slate-900/50 to-transparent pointer-events-none hidden md:block"></div>
         </div>
-        <div className="absolute top-0 right-0 bottom-6 w-16 bg-gradient-to-l from-gray-200/50 dark:from-slate-900/50 to-transparent pointer-events-none hidden md:block"></div>
-    </div>
-);
+    );
+};
 
 interface HomeFeedProps {
     onNavigate?: (view: View, surveyId?: string) => void;
