@@ -133,6 +133,51 @@ flowchart LR
     OTP --> AuthController
     ConfigJS --> UI
 ```
+---
+# **Authentication Sequence Diagram**
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant U as User<br>(Client)
+    participant UI as Frontend<br>(React)
+    participant API as Backend<br>(Express API)
+    participant Auth as Auth Controller<br>(/api/auth/login)
+    participant DB as Postgres<br>(Prisma ORM)
+    participant JWT as JWT Service
+
+    %% USER ACTION
+    U->>UI: Enter Email + Password<br>Click "Login"
+
+    %% FRONTEND REQUEST
+    UI->>API: POST /api/auth/login<br>{ email, password }
+
+    %% BACKEND HANDOFF
+    API->>Auth: Validate Request<br>Trim + sanitize input
+
+    %% DB LOOKUP
+    Auth->>DB: findUserByEmail(email)
+    DB-->>Auth: User Record or Null
+
+    %% PASSWORD VERIFY
+    Auth->>Auth: Compare bcrypt(password, hash)
+    Auth-->>API: Valid or Unauthorized
+
+    %% JWT GENERATION
+    API->>JWT: Generate Token<br>(userId)
+    JWT-->>API: Signed JWT
+
+    %% RESPONSE
+    API-->>UI: 200 OK<br>{ token, user }
+
+    %% FRONTEND STORE
+    UI->>UI: Save JWT (localStorage)<br>Set AuthContext
+
+    %% USER NAVIGATION
+    UI-->>U: Redirect to Dashboard<br>/feed or /mysurveys
+
+```
 
 ---
 
