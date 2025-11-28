@@ -82,51 +82,56 @@ Scalable from day one.
 Full system diagram showing all moving parts.
 
 ```mermaid
-flowchart TD
-
-    subgraph UserSide
-        U[User Browser]
-        LS[LocalStorage Token]
+---
+config:
+  theme: redux-dark
+---
+flowchart LR
+    subgraph CLIENT["🌐 Client Layer (Browsers / Mobile Web)"]
+        UI["React Frontend<br>(Tailwind + Framer Motion)<br>Pages: Login, Feed, Builder, Responder, MySurveys, Analytics"]
+        ConfigJS["config.js<br>(Runtime Env Vars)<br>(API_URL, GOOGLE_CLIENT_ID)"]
     end
-
-    subgraph Frontend
-        FE[React App - Vite Build]
-        CFG[config.js API URL Injection]
-        CDN[CloudFront CDN]
-        S3[S3 Static Site Bucket]
+    subgraph CDN["🚀 CDN + Static Hosting"]
+        CF["CloudFront"]
+        S3["S3 Bucket (Static Build)<br>/index.html, /assets, config.js"]
     end
-
-    subgraph Backend
-        APIGW[API Gateway HTTP API]
-        LAMBDA[Lambda Function with Express]
-        EXPRESS[Express App Router]
-        AUTHMW[Auth Middleware JWT Verify]
-        PRISMA[Prisma Client]
-        POSTGRES[(PostgreSQL DB)]
+    subgraph API["🧩 Backend API Layer"]
+        direction TB
+        APIGW["API Gateway (REST)"]
+        Backend["Node/Express Server<br>Compiled w/ esbuild<br>Routes: Auth, GoogleAuth, Surveys, Feed"]
+        AuthController["Auth Controller<br>(Login, Register, Google Login, OTP?)"]
+        SurveyController["Survey Controller<br>(Create, Update, Publish, Respond)"]
+        FeedController["Feed Controller<br>(Trending, Featured, Recommended)"]
+        Middleware["Middlewares:<br>CORS, JSON, AuthMiddleware (JWT Verify)"]
     end
-
-    subgraph Infra
-        TF[Terraform Modules]
-        IAM[IAM Roles and Policies]
-        OAC[Origin Access Control]
+    subgraph DB["🗄️ Database Layer"]
+        Postgres["PostgreSQL (Supabase/Railway/Neon)<br>Tables: Users, Surveys, Questions, Responses"]
+        Prisma["Prisma Client<br>+ Migrations<br>Used by Backend"]
     end
+    subgraph THIRD["🔌 Third-Party Services"]
+        GoogleID["Google Identity Services<br>(ID Token)"]
+        OTP["(Optional) SMS OTP Provider<br>(Twilio / Authy)"]
+    end
+    UI --> CF
+    CF --> S3
+    CF --> UI
+    UI --> ConfigJS
+    UI -->|API Calls using API_URL| APIGW
+    APIGW --> Backend
+    Backend --> Middleware
+    Backend --> AuthController
+    Backend --> SurveyController
+    Backend --> FeedController
+    AuthController --> Prisma
+    SurveyController --> Prisma
+    FeedController --> Prisma
+    Prisma --> Postgres
+    UI -->|Google ID Token| GoogleID
+    GoogleID -->|Verified Token| AuthController
 
-    U --> FE
-    FE --> CFG
-    FE --> CDN --> S3
-    FE --> APIGW
-    APIGW --> LAMBDA
-    LAMBDA --> EXPRESS
-    EXPRESS --> AUTHMW
-    EXPRESS --> PRISMA
-    PRISMA --> POSTGRES
-
-    TF --> APIGW
-    TF --> LAMBDA
-    TF --> S3
-    TF --> CDN
-    TF --> IAM
-    CDN --> OAC
+    UI -->|Send OTP / Verify| OTP
+    OTP --> AuthController
+    ConfigJS --> UI
 ```
 
 ---
