@@ -242,6 +242,66 @@ flowchart TB
 ```
 ---
 
+# **CI/CD Pipeline**
+This diagram shows the automated deployment flow for StatWoX:
+
+1. Developer pushes code → GitHub
+2. CI pipeline runs tests, lint, type-check, build
+3. Backend packaged → deployed to Lambda/API Gateway (or EC2)
+4. Frontend built → uploaded to S3
+5. Terraform applies infra updates
+6. CloudFront cache invalidated
+7. Frontend fetches config.js with updated API URL
+
+This is the “delivery assembly line” for StatWoX.
+
+```mermaid
+---
+config:
+  look: classic
+  theme: redux-dark
+  layout: elk
+---
+flowchart LR
+ subgraph CI["GitHub Actions CI Pipeline"]
+        Checkout["Checkout Code"]
+        Install["Install Deps<br>(npm install)"]
+        Lint["ESLint + Type Check"]
+        Test["Unit Tests + API Tests"]
+        FE_Build["Frontend Build<br>npm run build"]
+        BE_Build["Backend Build<br>esbuild bundle"]
+        Artifacts["Bundle Artifacts<br>(dist/, lambda.zip)"]
+  end
+ subgraph CD["Deployment Pipeline"]
+        TF_Plan["Terraform Plan"]
+        TF_Apply["Terraform Apply<br>Infrastructure Update"]
+        UploadS3["Upload Frontend Build<br>to S3 Bucket"]
+        DeployLambda["Deploy Lambda Package<br>(lambda.zip)"]
+        CF_Invalidate["CloudFront Invalidation<br>/*"]
+        Outputs["Terraform Outputs<br>API_URL, CDN_URL"]
+        UpdateConfig["Generate+Upload config.js<br>(API_URL injected)"]
+  end
+    Dev["Developer<br>Commits / PR"] --> GitHub["GitHub Repo<br>(statwox)"]
+    GitHub --> CI
+    CI --> Checkout
+    Checkout --> Install
+    Install --> Lint
+    Lint --> Test
+    Test --> FE_Build & BE_Build
+    FE_Build --> Artifacts
+    BE_Build --> Artifacts
+    Artifacts --> CD
+    CD --> TF_Plan
+    TF_Plan --> TF_Apply
+    TF_Apply --> UploadS3 & DeployLambda & Outputs
+    UploadS3 --> CF_Invalidate
+    Outputs --> UpdateConfig
+    UpdateConfig --> S3["S3 Static Hosting"]
+    S3 --> CF["CloudFront CDN"]
+    CF --> Users["Users on Browser"]
+    API["API Gateway / Lambda"] --> Users
+```
+---
 # **Authentication Sequence Diagram**
 
 ```mermaid
