@@ -133,7 +133,46 @@ flowchart LR
     OTP --> AuthController
     ConfigJS --> UI
 ```
+# **Detailed Architecture Breakdown**
+
+### **Frontend**
+
+* Built with React 19
+* Bundled by Vite
+* Tailwind loaded via CDN
+* Entire static site hosted in S3
+* Served globally through CloudFront
+* API_URL injected through config.js at deploy time
+* Uses localStorage for JWT token caching
+
+### **Backend**
+
+* Express.js running inside AWS Lambda
+* Serverless HTTP wrapper
+* JWT authentication for user sessions
+* Prisma client handles DB access
+* PostgreSQL remote instance
+* API Gateway handles all routing via `$default` catch all
+
+### **Infrastructure**
+
+* Terraform provisions everything
+* Zero public S3 access
+* CloudFront OAC signed access
+* Lambda zipped using archive_file
+* IAM roles created for Lambda execution
+* Database URL and JWT secret stored as env vars inside Lambda
+
+### **Build Flow**
+
+* `Vite build` outputs `dist/` with static assets
+* Terraform uploads them to S3 using dynamic fileset
+* Backend build creates lambda.js via esbuild
+* Zip is created and deployed as Lambda function source
+* Terraform outputs API URL and CloudFront domain
+
 ---
+
 # **Authentication Sequence Diagram**
 
 ```mermaid
@@ -181,92 +220,37 @@ sequenceDiagram
 
 ---
 
-# **Detailed Architecture Breakdown**
+# **Survey Creation Pipeline**
 
-### **Frontend**
+This diagram shows how a survey moves from the user's UI → through the builder flow → validated → stored in Postgres → returned to the UI.
+It covers:
 
-* Built with React 19
-* Bundled by Vite
-* Tailwind loaded via CDN
-* Entire static site hosted in S3
-* Served globally through CloudFront
-* API_URL injected through config.js at deploy time
-* Uses localStorage for JWT token caching
+- user actions,
+- frontend builder state,
+- backend validation,
+- Prisma operations,
+- and how the final survey gets an ID + gets stored.
 
-### **Backend**
-
-* Express.js running inside AWS Lambda
-* Serverless HTTP wrapper
-* JWT authentication for user sessions
-* Prisma client handles DB access
-* PostgreSQL remote instance
-* API Gateway handles all routing via `$default` catch all
-
-### **Infrastructure**
-
-* Terraform provisions everything
-* Zero public S3 access
-* CloudFront OAC signed access
-* Lambda zipped using archive_file
-* IAM roles created for Lambda execution
-* Database URL and JWT secret stored as env vars inside Lambda
-
-### **Build Flow**
-
-* `Vite build` outputs `dist/` with static assets
-* Terraform uploads them to S3 using dynamic fileset
-* Backend build creates lambda.js via esbuild
-* Zip is created and deployed as Lambda function source
-* Terraform outputs API URL and CloudFront domain
-
----
-
-# **Variable Flow Diagram**
+This pipeline matches StatWoX’s current structure: Survey Builder → Save Draft → Publish → Feed.
 
 ```mermaid
+---
+config:
+  theme: redux-dark
+  layout: dagre
+---
 flowchart LR
-    FE[Frontend] --> CONFIG[config.js]
-    CONFIG --> APIURL[API Gateway Endpoint]
-    FE --> TOKEN[LocalStorage Token]
-    TOKEN --> HeaderAuth[Authorization Header]
-    HeaderAuth --> Lambda
-    Lambda --> EnvVars[(DATABASE_URL and JWT_SECRET)]
-    EnvVars --> Postgres[(PostgreSQL)]
+    U["User<br>Creates Survey<br>(Builder UI)"] --> FE["Frontend (React)<br>Builder State + Draft Object<br>Validates title, desc, questions"]
+    FE -- Submit Survey --> API["POST /api/surveys<br>Express Controller"]
+    API --> VAL["Validation Layer<br>(Survey title, type,<br>question schema, options)"]
+    VAL -- Valid --> PRISMA["Prisma ORM<br>(survey.create,<br>question.createMany)"]
+    PRISMA --> DB["PostgreSQL<br>Tables:<br>- Survey<br>- Question<br>- Options"] & RES["Response<br>{ surveyId, status }"]
+    DB --> PRISMA
+    RES --> UIU["UI Update<br>Redirect to analytics<br>or preview page"]
+    UIU --> U
 ```
-
 ---
 
-# **User Flow**
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant FE as Frontend
-    participant API as API Gateway
-    participant L as Lambda API
-    participant DB as PostgreSQL
-
-    U->>FE: Load StatWoX App
-    FE->>U: Render Login or Dashboard
-    U->>FE: Submit Credentials
-    FE->>API: POST /api/auth/login
-    API->>L: Invoke Lambda
-    L->>DB: Validate User
-    DB-->>L: User Loaded
-    L-->>FE: JWT Token
-    FE->>LS: Save Token
-
-    U->>FE: Visit My Surveys
-    FE->>API: GET /api/surveys
-    API->>L: Pass Bearer Token
-    L->>DB: Fetch Surveys
-    DB-->>L: Survey Data
-    L-->>FE: Return JSON
-```
-
----
-
-Say less. Clean table. All badges. GitHub safe.
 
 ---
 
