@@ -575,6 +575,7 @@ flowchart LR
 ```
 
 </details>
+
 [🔼 Back to Top](#table-of-contents)
 ---
 # <span id="tech-stack">🧪 Tech Stack</span>
