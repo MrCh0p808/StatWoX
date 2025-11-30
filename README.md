@@ -1,6 +1,7 @@
 <div align="center">
-
-<h1><b>StatWoX : Surveys / Forms / Polls</b></h1>
+  <img src="frontend/public/assets/logo.svg" width="600" alt="StatWoX Logo"/>
+</div>
+<div align="center">
 <h3><b><i>Let The Stat Work Out Your Decision Making</i></b></h3>
 
 <img src="https://img.shields.io/badge/Build-passing-brightgreen" />
@@ -394,6 +395,7 @@ flowchart LR
 ```
 
 </details>
+
 [🔼 Back to Top](#table-of-contents)
 
 ---
@@ -430,6 +432,8 @@ sequenceDiagram
 
 </details>
 
+[🔼 Back to Top](#table-of-contents)
+
 ---
 
 # <span id="google-login-flow">🔑 Google Login Flow (End-to-End)</span>
@@ -464,6 +468,8 @@ sequenceDiagram
 
 </details>
 
+[🔼 Back to Top](#table-of-contents)
+
 ---
 
 # <span id="survey-creation-pipeline">📝 Survey Creation Pipeline</span>
@@ -484,6 +490,9 @@ flowchart LR
 ```
 
 </details>
+
+[🔼 Back to Top](#table-of-contents)
+
 ---
 
 # <span id="data-flow">🔄 Data Flow Diagram</span>
@@ -509,6 +518,9 @@ flowchart LR
 ```
 
 </details>
+
+[🔼 Back to Top](#table-of-contents)
+
 ---
 
 # <span id="backend-internal-module-graph">⚙️ Backend Internal Module Graph</span>
@@ -577,6 +589,7 @@ flowchart LR
 </details>
 
 [🔼 Back to Top](#table-of-contents)
+
 ---
 # <span id="tech-stack">🧪 Tech Stack</span>
 
