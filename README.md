@@ -172,6 +172,85 @@ flowchart LR
 * Terraform outputs API URL and CloudFront domain
 
 ---
+# **Low-Level Architecture**
+This diagram shows the internal mechanics of the StatWoX backend at a low level:
+
+- How an HTTP request enters Express
+- How middlewares chain (CORS → JSON → Auth)
+- How routers map to controllers
+- How controllers call service methods
+- How services validate input and talk to Prisma
+- How responses bubble back up the chain
+- Where token utilities and shared helpers plug in
+
+Think of this as the “engine blueprint” of the backend.
+
+```mermaid
+---
+config:
+  theme: redux-dark
+  layout: elk
+---
+flowchart TB
+ subgraph MW["Middleware Chain"]
+        CORS["CORS Middleware<br>Allowed Origins"]
+        JSONMW["JSON Parser<br>express.json()"]
+        LogMW["Request Logger<br>(optional)"]
+        AuthMW["Auth Middleware<br>Read JWT → req.user"]
+        ErrorMW["Global Error Handler"]
+  end
+ subgraph ROUTERS["Route Layer"]
+        AuthR["auth.routes.ts<br>/api/auth"]
+        GoogleR["googleAuth.routes.ts<br>/api/auth/google"]
+        SurveyR["survey.routes.ts<br>/api/surveys"]
+        ResponseR["response.routes.ts<br>/api/responses"]
+        FeedR["feed.routes.ts<br>/api/feed"]
+  end
+ subgraph CTRL["Controller Layer"]
+        AuthCtrl["Auth Controller<br>login()<br>register()<br>googleLogin()"]
+        SurveyCtrl["Survey Controller<br>create()<br>update()<br>publish()"]
+        RespCtrl["Response Controller<br>submit()<br>validate()"]
+        FeedCtrl["Feed Controller<br>getTrending()<br>getFeatured()"]
+  end
+ subgraph SERVICES["Service Layer"]
+        UserSvc["User Service<br>hashPassword()<br>compare()<br>findOrCreateUser()"]
+        SurveySvc["Survey Service<br>validateSchema()<br>createSurvey()<br>addQuestions()"]
+        RespSvc["Response Service<br>storeResponse()<br>aggregateStats()"]
+        FeedSvc["Feed Service<br>rankSurveys()<br>loadFeed()"]
+  end
+ subgraph UTILS["Utility Layer"]
+        TokenUtil["Token Utils<br>signJWT()<br>verifyJWT()"]
+        Validator["Validation Schemas<br>(Zod/Yup/Joi)"]
+        Crypto["Crypto Helpers<br>bcrypt, hashing"]
+  end
+ subgraph DB["Database Layer"]
+        Prisma["Prisma Client<br>(Type-Safe ORM)"]
+        PG["PostgreSQL<br>Tables:<br>Users<br>Surveys<br>Questions<br>Responses"]
+  end
+    Entry["server.ts / index.ts<br>• Express() Init<br>• Env Load (.env)<br>• Register Middlewares<br>• Attach Routers"] --> CORS
+    CORS --> JSONMW
+    JSONMW --> LogMW
+    LogMW --> AuthMW
+    AuthMW --> ROUTERS & TokenUtil
+    AuthR --> AuthCtrl
+    GoogleR --> AuthCtrl
+    SurveyR --> SurveyCtrl
+    ResponseR --> RespCtrl
+    FeedR --> FeedCtrl
+    AuthCtrl --> UserSvc & TokenUtil
+    SurveyCtrl --> SurveySvc
+    RespCtrl --> RespSvc
+    FeedCtrl --> FeedSvc
+    UserSvc --> Prisma & Crypto
+    SurveySvc --> Prisma & Validator
+    RespSvc --> Prisma & Validator
+    FeedSvc --> Prisma
+    Prisma --> PG
+    ROUTERS --> ErrorMW
+    CTRL --> ErrorMW
+    SERVICES --> ErrorMW
+```
+---
 # **Tech Stack**
 
 | Category           | Tools                                                                                                                                                                                                                                                                                                                                                                                 |
