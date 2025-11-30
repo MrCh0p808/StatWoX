@@ -43,20 +43,24 @@ Simple idea. Sharp execution.
 > Link inside repo description.
 
 ---
-
 # **Table of Contents**
 
-* [What StatWoX Does](#what-statwox-does)
-* [Architecture Diagram](#architecture-diagram)
-* [Detailed Architecture Breakdown](#detailed-architecture-breakdown)
-* [Variable Flow Diagram](#variable-flow-diagram)
-* [User Flow](#user-flow)
-* [Tech Stack](#tech-stack)
-* [Local Setup Guide](#local-setup-guide)
-* [Production Deployment Terraform](#production-deployment-terraform)
-* [API Reference](#api-reference)
-* [Contributing Guide](#contributing-guide)
-* [Changelog](#changelog)
+- [What StatWoX Does](#what-statwox-does)
+- [Architecture Diagram](#architecture-diagram)
+- [Detailed Architecture Breakdown](#detailed-architecture-breakdown)
+- [Low-Level Architecture](#low-level-architecture)
+- [Terraform Infra Map](#terraform-infra-map)
+- [CI/CD Pipeline](#cicd-pipeline)
+- [Authentication Sequence Diagram](#authentication-sequence-diagram)
+- [Survey Creation Pipeline](#survey-creation-pipeline)
+- [Data Flow](#data-flow)
+- [Backend Internal Module Graph](#backend-internal-module-graph)
+- [Tech Stack](#tech-stack)
+- [Local Setup Guide](#local-setup-guide)
+- [Production Deployment Terraform](#production-deployment-terraform)
+- [API Reference](#api-reference)
+- [Contributing Guide](#contributing-guide)
+- [Changelog](#changelog)
 
 ---
 
