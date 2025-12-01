@@ -6,28 +6,51 @@ const router = Router();
 
 router.get("/", async (req, res) => {
   try {
-    const items = await prisma.survey.findMany({
-    where: { status: "Published" },
-    orderBy: { createdAt: "desc" },
-    include: {
+    // 1. Featured: Random or recent published surveys (excluding polls for variety)
+    const featured = await prisma.survey.findMany({
+      where: { status: "Published", category: "survey" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
         _count: { select: { responses: true } },
         author: { select: { username: true } }
-    },
-    take: 30
+      }
     });
 
-    const formatted = items.map(item => ({
-    id: item.id,
-    title: item.title,
-    responses: item._count.responses,
-    author: item.author?.username ?? item.authorId,
-    category: item.category
+    // 2. Trending: Most responses
+    const trending = await prisma.survey.findMany({
+      where: { status: "Published" },
+      orderBy: { responseCount: "desc" },
+      take: 5,
+      include: {
+        _count: { select: { responses: true } },
+        author: { select: { username: true } }
+      }
+    });
+
+    // 3. Quick Polls: Category = poll
+    const quickPolls = await prisma.survey.findMany({
+      where: { status: "Published", category: "poll" },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: {
+        _count: { select: { responses: true } },
+        author: { select: { username: true } }
+      }
+    });
+
+    const format = (items: any[]) => items.map(item => ({
+      id: item.id,
+      title: item.title,
+      responses: item.responseCount,
+      author: item.author?.username ?? "Unknown",
+      category: item.category
     }));
 
     return res.json({
-      featured: formatted.slice(0, 6),
-      trending: formatted.slice(6, 12),
-      quickPolls: formatted.slice(12, 18)
+      featured: format(featured),
+      trending: format(trending),
+      quickPolls: format(quickPolls)
     });
   } catch (err) {
     console.error("feed error", err);

@@ -57,7 +57,7 @@ export const HomeFeed: React.FC<HomeFeedProps> = ({ onNavigate }) => {
     useEffect(() => {
         const loadFeed = async () => {
             try {
-                const data = await apiFetch('/feed');
+                const data = await apiFetch('/api/feed');
                 setFeatured(data.featured || []);
                 setTrending(data.trending || []);
                 setQuickPolls(data.quickPolls || []);

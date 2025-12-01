@@ -4,6 +4,7 @@ import type { View, SurveyDraft, Question, SurveyCategory } from '../types';
 import { ArrowLeftIcon } from './icons/ArrowLeftIcon';
 import { CheckIcon } from './icons/CheckIcon';
 import { ResponderQuestion } from './ResponderQuestion';
+import { API_BASE_URL } from '../constants';
 
 interface ResponderProps {
     surveyId: string | null;
@@ -36,7 +37,7 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
             setIsLoading(true);
 
             try {
-                const res = await fetch(`/api/surveys/${surveyId}`);
+                const res = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}`);
                 if (!res.ok) throw new Error("Survey not found");
                 const data = await res.json();
                 setSurvey(data);
@@ -91,10 +92,12 @@ export const Responder: React.FC<ResponderProps> = ({ surveyId, onNavigate }) =>
 
         try {
             // Sending the answers to the backend
-            const res = await fetch(`/api/surveys/${surveyId}/responses`, {
+            // NOTE: The backend expects { payload: { ...answers } } or just the body as payload. 
+            // My controller takes req.body as payload directly.
+            const res = await fetch(`${API_BASE_URL}/api/surveys/${surveyId}/responses`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ answers })
+                body: JSON.stringify(answers) // Sending answers directly as the body
             });
 
             if (!res.ok) throw new Error("Failed to submit");

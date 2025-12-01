@@ -1,154 +1,232 @@
-// backend/src/controllers/surveys.ts
+import { Response } from "express";
 import { PrismaClient } from "@prisma/client";
-import { Request, Response } from "express";
-import { v4 as uuidv4 } from "uuid";
+import { AuthRequest } from "../middleware/auth.js";
 
 const prisma = new PrismaClient();
 
-/**
- * POST /api/surveys
- * This is where I create a new survey.
- * It expects a JSON body with the survey title, questions, etc.
- */
-export const createSurvey = async (req: Request, res: Response) => {
+// Helper to map DB question to Frontend question
+const mapQuestionToFrontend = (q: any) => ({
+  id: q.id,
+  type: q.type,
+  title: q.text,
+  helpText: q.helpText,
+  required: q.required,
+  options: q.options?.map((o: any) => o.text) || [],
+});
+
+export const createSurvey = async (req: AuthRequest, res: Response) => {
   try {
-    // Getting the user ID from the token (set by my auth middleware)
-    const userId = (req as any).userId || null;
-    const draft = req.body;
+    const { title, description, category, questions } = req.body;
+    const userId = req.userId;
 
-    // Basic validation to make sure I'm not saving junk data
-    if (!draft || !draft.title || !Array.isArray(draft.questions)) {
-      return res.status(400).json({ message: "Invalid survey draft" });
-    }
-
-    // Creating the survey and all its questions in one go using Prisma's nested writes.
-    // This is super cool because it ensures everything is saved or nothing is.
-    const survey = await prisma.survey.create({
-      data: {
-        id: draft.id || uuidv4(),
-        title: draft.title,
-        description: draft.description ?? "",
-        category: draft.category ?? "survey",
-        status: draft?.status ?? "Draft",
-        authorId: userId,
-        questions: {
-          create: draft.questions.map((q: any, idx: number) => ({
-            id: q.id || uuidv4(),
-            text: q.title,
-            type: q.type,
-            helpText: q.helpText ?? null,
-            required: !!q.required,
-            order: idx,
-            // If the question has options (like multiple choice), I map them here too
-            options: q.options?.map((o: string) => ({ text: o })) ?? undefined
-          }))
-        }
-      },
-      include: { questions: true }
-    });
-
-    return res.status(201).json(survey);
-  } catch (err: any) {
-    console.error("createSurvey:", err);
-    return res.status(500).json({ message: "Server error", error: err.message });
-  }
-};
-
-/**
- * GET /api/surveys
- * This lists all the surveys created by the currently logged-in user.
- */
-export const listSurveys = async (req: Request, res: Response) => {
-  try {
-    const userId = (req as any).userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    // Fetching surveys from the DB, ordered by newest first
-    const surveys = await prisma.survey.findMany({
-      where: { authorId: userId },
-      orderBy: { createdAt: "desc" },
-      include: { questions: true }
+    const survey = await prisma.survey.create({
+      data: {
+        title,
+        description,
+        category: category || "survey",
+        authorId: userId,
+        questions: {
+          create: questions.map((q: any, index: number) => ({
+            text: q.title,
+            type: q.type,
+            helpText: q.helpText,
+            required: q.required,
+            order: index,
+            options: {
+              create: q.options?.map((opt: string) => ({ text: opt })) || [],
+            },
+          })),
+        },
+      },
+      include: {
+        questions: {
+          include: { options: true },
+        },
+      },
     });
 
-    return res.json(surveys);
-  } catch (err: any) {
-    console.error("listSurveys:", err);
-    return res.status(500).json({ message: "Server error" });
+    res.status(201).json({ id: survey.id });
+  } catch (error: any) {
+    console.error("createSurvey error:", error);
+    res.status(500).json({ message: "Failed to create survey" });
   }
 };
 
-/**
- * GET /api/surveys/:id
- * This fetches a single survey so someone can take it (Responder view).
- */
-export const getSurveyById = async (req: Request, res: Response) => {
+export const listSurveys = async (req: AuthRequest, res: Response) => {
   try {
-    const id = req.params.id;
-    // I need to include questions and their options so the frontend can render the form
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const surveys = await prisma.survey.findMany({
+      where: { authorId: userId },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        _count: {
+          select: { responses: true },
+        },
+      },
+    });
+
+    const formatted = surveys.map((s) => ({
+      id: s.id,
+      title: s.title,
+      responses: s._count.responses,
+      status: s.status,
+      category: s.category,
+      author: "Me", // Since it's my list
+    }));
+
+    res.json(formatted);
+  } catch (error: any) {
+    console.error("listSurveys error:", error);
+    res.status(500).json({ message: "Failed to fetch surveys" });
+  }
+};
+
+export const getSurvey = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
     const survey = await prisma.survey.findUnique({
       where: { id },
       include: {
-        questions: { include: { options: true }, orderBy: { order: "asc" } }
-      }
+        questions: {
+          orderBy: { order: "asc" },
+          include: { options: true },
+        },
+      },
     });
 
     if (!survey) return res.status(404).json({ message: "Survey not found" });
 
-    // Transforming the DB data into the shape my frontend expects (SurveyDraft interface)
-    const draft = {
+    const formatted = {
       id: survey.id,
-      category: survey.category,
       title: survey.title,
       description: survey.description,
-      questions: survey.questions.map((q: any) => ({
-        id: q.id,
-        type: q.type,
-        title: q.text,
-        helpText: q.helpText,
-        required: q.required,
-        options: q.options?.map((o: any) => o.text) ?? []
-      }))
+      category: survey.category,
+      status: survey.status,
+      questions: survey.questions.map(mapQuestionToFrontend),
     };
 
-    return res.json(draft);
-  } catch (err: any) {
-    console.error("getSurveyById:", err);
-    return res.status(500).json({ message: "Server error" });
+    res.json(formatted);
+  } catch (error: any) {
+    console.error("getSurvey error:", error);
+    res.status(500).json({ message: "Failed to fetch survey" });
   }
 };
 
-/**
- * POST /api/surveys/:id/responses
- * This saves the answers when someone submits a survey.
- */
-export const submitResponse = async (req: Request, res: Response) => {
+export const updateSurvey = async (req: AuthRequest, res: Response) => {
   try {
-    const id = req.params.id;
-    const { answers, meta } = req.body;
+    const { id } = req.params;
+    const { title, description, questions } = req.body;
+    const userId = req.userId;
 
-    if (!answers || typeof answers !== "object") {
-      return res.status(400).json({ message: "Invalid answers payload" });
+    // check if i own this
+    const existing = await prisma.survey.findUnique({ where: { id } });
+    if (!existing || existing.authorId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
-    // Saving the response as a JSON blob for flexibility
-    const response = await prisma.surveyResponse.create({
-      data: {
-        id: uuidv4(),
-        surveyId: id,
-        payload: { answers, meta: meta ?? {} }
-      }
-    });
+    // update details and swap questions
+    // destructive update, but simpler for now
+    await prisma.$transaction([
+      prisma.questionOption.deleteMany({ where: { question: { surveyId: id } } }),
+      prisma.question.deleteMany({ where: { surveyId: id } }),
+      prisma.survey.update({
+        where: { id },
+        data: {
+          title,
+          description,
+          questions: {
+            create: questions.map((q: any, index: number) => ({
+              text: q.title,
+              type: q.type,
+              helpText: q.helpText,
+              required: q.required,
+              order: index,
+              options: {
+                create: q.options?.map((opt: string) => ({ text: opt })) || [],
+              },
+            })),
+          },
+        },
+      }),
+    ]);
 
-    // Incrementing the response counter on the survey itself
-    // This makes it fast to show "10 responses" on the dashboard without counting rows every time
+    res.json({ message: "Survey updated" });
+  } catch (error: any) {
+    console.error("updateSurvey error:", error);
+    res.status(500).json({ message: "Failed to update survey" });
+  }
+};
+
+export const deleteSurvey = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const existing = await prisma.survey.findUnique({ where: { id } });
+    if (!existing || existing.authorId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    await prisma.survey.delete({ where: { id } });
+    res.json({ message: "Survey deleted" });
+  } catch (error: any) {
+    console.error("deleteSurvey error:", error);
+    res.status(500).json({ message: "Failed to delete survey" });
+  }
+};
+
+export const publishSurvey = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    const existing = await prisma.survey.findUnique({ where: { id } });
+    if (!existing || existing.authorId !== userId) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
     await prisma.survey.update({
       where: { id },
-      data: { responseCount: { increment: 1 } }
+      data: { status: "Published" },
     });
 
-    return res.status(201).json({ ok: true, id: response.id });
-  } catch (err: any) {
-    console.error("submitResponse:", err);
-    return res.status(500).json({ message: "Server error" });
+    res.json({ message: "Survey published" });
+  } catch (error: any) {
+    console.error("publishSurvey error:", error);
+    res.status(500).json({ message: "Failed to publish survey" });
+  }
+};
+
+export const submitResponse = async (req: any, res: Response) => {
+  try {
+    const { id } = req.params;
+    const payload = req.body; // The answers
+
+    // 1. Verify survey exists
+    const survey = await prisma.survey.findUnique({ where: { id } });
+    if (!survey) return res.status(404).json({ message: "Survey not found" });
+
+    // 2. Save response
+    await prisma.surveyResponse.create({
+      data: {
+        surveyId: id,
+        payload,
+      },
+    });
+
+    // 3. Increment count (Atomic)
+    await prisma.survey.update({
+      where: { id },
+      data: { responseCount: { increment: 1 } },
+    });
+
+    res.status(201).json({ message: "Response submitted" });
+  } catch (error: any) {
+    console.error("submitResponse error:", error);
+    res.status(500).json({ message: "Failed to submit response" });
   }
 };

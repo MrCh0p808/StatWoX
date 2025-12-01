@@ -7,7 +7,7 @@ export const getAnalytics = async (req: Request, res: Response) => {
   try {
     const surveyId = req.params.id;
 
-    // Fetch survey with questions
+    // fetch survey with questions
     const survey = await prisma.survey.findUnique({
       where: { id: surveyId },
       include: { questions: { include: { options: true }, orderBy: { order: 'asc' } } }
@@ -15,7 +15,7 @@ export const getAnalytics = async (req: Request, res: Response) => {
 
     if (!survey) return res.status(404).json({ message: "Survey not found" });
 
-    // Fetch all responses
+    // fetch all responses
     const responses = await prisma.surveyResponse.findMany({
       where: { surveyId },
       orderBy: { submittedAt: 'desc' }
@@ -23,7 +23,7 @@ export const getAnalytics = async (req: Request, res: Response) => {
 
     const totalResponses = responses.length;
 
-    // Process questions
+    // process questions
     const questions = survey.questions.map(q => {
       const qStats: any = {
         id: q.id,
@@ -34,7 +34,7 @@ export const getAnalytics = async (req: Request, res: Response) => {
 
       if (q.type === 'multipleChoice' || q.type === 'rating' || q.type === 'yesNo') {
         const counts: Record<string, number> = {};
-        // Initialize counts for options if available
+        // init counts for options
         q.options.forEach(o => counts[o.text] = 0);
 
         responses.forEach(r => {
@@ -54,7 +54,7 @@ export const getAnalytics = async (req: Request, res: Response) => {
           percentage: totalResponses > 0 ? Math.round((count / totalResponses) * 100) : 0
         }));
       } else {
-        // Text questions - collect recent answers
+        // text questions - grab recent answers
         qStats.recentAnswers = responses
           .map(r => (r.payload as any)?.answers?.[q.id])
           .filter(a => a)
@@ -64,14 +64,14 @@ export const getAnalytics = async (req: Request, res: Response) => {
       return qStats;
     });
 
-    // Format individual responses for the table
+    // format responses for table
     const individualResponses = responses.map((r, i) => {
       const flat: any = {
-        id: r.id.slice(0, 8), // Short ID
+        id: r.id.slice(0, 8), // short id
         date: new Date(r.submittedAt).toLocaleDateString(),
-        status: 'Completed', // Mock status
+        status: 'Completed', // mock status
       };
-      // Add first few answers for the table columns
+      // add first few answers for columns
       survey.questions.slice(0, 3).forEach((q, idx) => {
         const val = (r.payload as any)?.answers?.[q.id];
         flat[`q${idx + 1}`] = Array.isArray(val) ? val.join(', ') : (val || '-');
@@ -83,8 +83,8 @@ export const getAnalytics = async (req: Request, res: Response) => {
       id: survey.id,
       title: survey.title,
       totalResponses,
-      completionRate: 100, // Mock for now
-      avgTime: '1m 30s', // Mock for now
+      completionRate: 100, // mock for now
+      avgTime: '1m 30s', // mock for now
       questions,
       individualResponses
     };

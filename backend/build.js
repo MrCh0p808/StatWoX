@@ -22,41 +22,26 @@ await build({
   sourcemap: false,
   minify: false,
 
-  // DO NOT bundle node_modules deps
-  external: [
-    "express",
-    "cors",
-    "serverless-http",
-    "jsonwebtoken",
-    "bcryptjs",
-    "axios",
-    "@prisma/client",
-    "prisma"
-  ]
+  // Bundle all dependencies EXCEPT Prisma
+  external: ["@prisma/client", "prisma"]
 });
 
-// 3. COPY PRISMA ENGINE (find correct one automatically)
-const prismaClientDir = "./node_modules/.prisma/client";
-const files = readdirSync(prismaClientDir);
+// 3. COPY PRISMA ARTIFACTS
+// We need to reconstruct the node_modules structure for Prisma to work
+const cpSync = (src, dest) => {
+  copyFileSync(src, dest);
+};
 
-// Look for engine file that ends with .so.node
-// Look for Prisma engine file (common suffixes)
-const engineFile = files.find(f =>
-  f.endsWith('.so.node') ||
-  f.endsWith('.dylib.node') ||
-  f.endsWith('.dll.node') ||
-  f.includes('query-engine') || // fallback
-  f.endsWith('.node')
-);
+// Function to copy directory recursively
+import { cpSync as fsCpSync } from "fs";
 
-if (!engineFile) {
-  throw new Error("[BUILD ERROR] Could not find Prisma engine in .prisma/client. Files: " + files.join(', '));
-}
+console.log("Copying Prisma files...");
 
-copyFileSync(
-  `${prismaClientDir}/${engineFile}`,
-  `./dist/${engineFile}`
-);
+// Copy generated client
+fsCpSync("node_modules/@prisma/client", "dist/node_modules/@prisma/client", { recursive: true });
 
-console.log("✔ Prisma engine copied:", engineFile);
+// Copy .prisma (engines)
+fsCpSync("node_modules/.prisma", "dist/node_modules/.prisma", { recursive: true });
+
+console.log("✔ Prisma files copied.");
 console.log("✔ Build complete. Lambda ready inside dist/");

@@ -1,17 +1,15 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+import { v4 as uuidv4 } from 'uuid';
 
-// MOCK STORAGE (In-Memory)
-// This is where I store the OTP codes temporarily since the database is offline.
-const mockOtpStore = new Map<string, { code: string, expiresAt: Date }>();
-// This stores the user details for phone login users.
-const mockUserStore = new Map<string, any>();
+const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-// Mock function to send SMS
-// Instead of paying for Twilio, I'm just printing the code to the console.
-// This is great for testing without spending money.
+// mock sms sender
+// just printing to console to save money
 const sendSms = async (phone: string, code: string) => {
     console.log(`\n[MOCK SMS] ---------------------------------------------------`);
     console.log(`[MOCK SMS] To: ${phone}`);
@@ -20,7 +18,7 @@ const sendSms = async (phone: string, code: string) => {
     return true;
 };
 
-// Controller to handle sending the OTP
+// send otp
 export const sendOtp = async (req: Request, res: Response): Promise<void> => {
     try {
         const { phone } = req.body;
@@ -30,25 +28,37 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Generating a random 6-digit code
+        // gen 6 digit code
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        // Setting expiration to 10 minutes from now
+        // expires in 10 mins
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Saving the code to my mock store so I can check it later
-        mockOtpStore.set(phone, { code, expiresAt });
+        // save code to db
+        await prisma.otp.create({
+            data: {
+                phone,
+                code,
+                expiresAt
+            }
+        });
 
-        // "Sending" the SMS (printing to console)
+        // "send" sms
         await sendSms(phone, code);
 
-        res.status(200).json({ message: 'OTP sent successfully' });
+        // MVP Contract: return sessionId (mock) and success
+        res.status(200).json({
+            success: true,
+            sessionId: uuidv4(),
+            method: "mock",
+            message: 'OTP sent successfully'
+        });
     } catch (error) {
         console.error('Send OTP Error:', error);
         res.status(500).json({ message: 'Failed to send OTP' });
     }
 };
 
-// Controller to verify the OTP code
+// verify otp
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
     try {
         const { phone, code } = req.body;
@@ -58,45 +68,53 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Retrieving the stored code for this phone number
-        const record = mockOtpStore.get(phone);
+        // MVP Contract: Accept 000000 as debug code
+        let isValid = false;
+        let record;
 
-        if (!record) {
-            res.status(400).json({ message: 'No OTP found for this number' });
+        if (code === '000000') {
+            isValid = true;
+        } else {
+            // get valid code
+            record = await prisma.otp.findFirst({
+                where: {
+                    phone,
+                    code,
+                    expiresAt: { gt: new Date() }
+                },
+                orderBy: { createdAt: 'desc' }
+            });
+            if (record) isValid = true;
+        }
+
+        if (!isValid) {
+            res.status(400).json({ message: 'Invalid or expired OTP' });
             return;
         }
 
-        // Checking if the code matches
-        if (record.code !== code) {
-            res.status(400).json({ message: 'Invalid code' });
-            return;
-        }
-
-        // Checking if the code has expired
-        if (new Date() > record.expiresAt) {
-            res.status(400).json({ message: 'OTP expired' });
-            return;
-        }
-
-        // Checking if this user already exists in my mock store
-        let user = mockUserStore.get(phone);
+        // check if user exists
+        let user = await prisma.user.findUnique({ where: { phone } });
 
         if (!user) {
-            // If not, create a new mock user for them
-            user = {
-                id: `mock_user_${Date.now()}`,
-                phone,
-                username: `user_${phone.slice(-4)}`,
-                email: `${phone}@phone.statwox.com`,
-            };
-            mockUserStore.set(phone, user);
+            // create new user if not found
+            const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            user = await prisma.user.create({
+                data: {
+                    phone,
+                    username: `user_${phone.slice(-4)}_${randomSuffix}`,
+                    email: `${phone}@phone.statwox.com`, // placeholder
+                    password: await bcrypt.hash(uuidv4(), 10) // random pass
+                }
+            });
         }
 
-        // Generating the login token
-        const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+        // gen token
+        const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
 
-        // Removing the used OTP so it can't be used again
-        mockOtpStore.delete(phone);
+        // burn the code if it was a real one
+        if (record) {
+            await prisma.otp.delete({ where: { id: record.id } });
+        }
 
         res.status(200).json({ token, user });
     } catch (error) {

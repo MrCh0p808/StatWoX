@@ -600,6 +600,7 @@ flowchart LR
 | ------------------ | ------------------------------------------------------ |
 | **Frontend**       | React 19, TypeScript 5, Vite, Tailwind, CloudFront, S3 |
 | **Backend**        | Express.js, Node 20, Prisma ORM, BcryptJS, JWT         |
+| **Database**       | AWS Aurora Serverless v2 (PostgreSQL)                  |
 | **Infrastructure** | AWS Lambda, API Gateway, S3, CloudFront, Terraform     |
 
 </details>

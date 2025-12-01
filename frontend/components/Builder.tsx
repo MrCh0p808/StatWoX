@@ -104,23 +104,43 @@ export const Builder: React.FC<BuilderProps> = ({ category, onNavigate }) => {
         setIsSaving(true);
 
         try {
-            const response = await apiFetch('/surveys', {
-                method: 'POST',
+            const isNew = draft.id.startsWith('draft-');
+            const method = isNew ? 'POST' : 'PUT';
+            const url = isNew ? '/surveys' : `/surveys/${draft.id}`;
+
+            const response = await apiFetch(url, {
+                method,
                 body: JSON.stringify(draft)
             });
 
             if (!response.ok) throw new Error("Failed to save survey");
 
+            const data = await response.json();
+
+            // If it was new, update the ID so future saves are updates
+            if (isNew && data.id) {
+                setDraft(prev => ({ ...prev, id: data.id }));
+            }
+
+            // If it's a poll or form, we publish it immediately
+            if (category === 'poll' || category === 'form') {
+                const publishRes = await apiFetch(`/surveys/${data.id || draft.id}/publish`, {
+                    method: 'PATCH'
+                });
+                if (!publishRes.ok) console.warn("Failed to publish automatically");
+            }
+
+            alert(`${category === 'poll' ? 'Poll Launched' : 'Saved'} Successfully!`);
+
+            // Navigate back to list
+            onNavigate('surveys');
+
         } catch (err) {
             console.error(err);
             alert("Failed to save survey");
+        } finally {
             setIsSaving(false);
-            return;
         }
-
-        setIsSaving(false);
-        alert(`${category === 'poll' ? 'Poll Launched' : 'Saved'} Successfully!`);
-        onNavigate('surveys');
     };
 
     // --- Toolbox Renders (Sticky Bottom) ---

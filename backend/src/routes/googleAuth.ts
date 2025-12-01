@@ -1,51 +1,54 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
-import axios from 'axios';
+import { OAuth2Client } from 'google-auth-library';
 
 const router = Router();
 const prisma = new PrismaClient();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-router.post('/', async (req, res) => {
+router.post('/google', async (req, res) => {
   const { credential } = req.body;
   if (!credential) return res.status(400).json({ message: 'Missing Google credential' });
 
   try {
-    const googleRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
-    const { email, name, sub } = googleRes.data;
+    // Verify the token with Google
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
 
-    // MOCK MODE: Bypassing database for now
-    // let user = await prisma.user.findUnique({ where: { email } });
+    if (!payload || !payload.email) {
+      return res.status(400).json({ message: 'Invalid Google Token: No email found' });
+    }
 
-    // In-memory mock user creation
-    const mockUser = {
-      id: `mock_google_${sub}`,
-      email,
-      username: name.replace(/\s+/g, "") + "_" + sub.slice(-5),
-      password: "GOOGLE_USER"
-    };
+    const { email, name, sub } = payload;
 
-    console.log(`[MOCK GOOGLE LOGIN] User: ${email}`);
+    // Find or create the user in the real database
+    // We use upsert to handle both cases atomically
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {}, // If they exist, we just log them in. No updates needed for now.
+      create: {
+        username: (name || "google_user").replace(/\s+/g, "") + "_" + (sub || "").slice(-5),
+        email,
+        password: "GOOGLE_USER_NO_PASSWORD", // Placeholder, they can't login with password unless they set one
+        // We could store the googleId (sub) if we added a field to the schema, but email is unique enough for now.
+      }
+    });
+
+    console.log(`[GOOGLE LOGIN] User: ${email} (${user.id})`);
 
     const token = jwt.sign(
-      { userId: mockUser.id, email: mockUser.email },
+      { userId: user.id, email: user.email },
       process.env.JWT_SECRET!,
-      { expiresIn: '1h' }
+      { expiresIn: '7d' }
     );
 
     return res.json({ token });
   } catch (error: any) {
-    console.error("googleAuth error:", error?.response?.data ?? error);
-    // Even if Google fails (e.g. invalid token from localhost), let's allow login for dev testing if needed
-    // UNCOMMENT BELOW TO FORCE LOGIN ON ERROR FOR TESTING
-    /*
-    const token = jwt.sign(
-        { userId: 'mock_fallback_user', email: 'test@example.com' },
-        process.env.JWT_SECRET!,
-        { expiresIn: '1h' }
-    );
-    return res.json({ token });
-    */
+    console.error("googleAuth error:", error?.message || error);
     return res.status(500).json({ message: 'Google OAuth failed' });
   }
 });

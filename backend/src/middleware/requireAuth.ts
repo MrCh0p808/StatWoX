@@ -6,9 +6,8 @@ import jwt from "jsonwebtoken";
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
-  // Checking if the header exists and starts with "Bearer "
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ message: "Authentication token required" });
+    return res.status(401).json({ message: "No token provided" });
   }
 
   // Grabbing the token part

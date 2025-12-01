@@ -6,66 +6,77 @@ import { GoogleIcon } from './icons/GoogleIcon';
 import { PhoneIcon } from './icons/PhoneIcon';
 import { EyeIcon } from './icons/EyeIcon';
 import { EyeOffIcon } from './icons/EyeOffIcon';
-import { API_BASE_URL } from '../constants';
+import { API_BASE_URL, GOOGLE_CLIENT_ID } from '../constants';
 
-// Defining what props this component needs. It just needs a function to call when login works.
+// props: just need a success callback
 interface LoginProps {
     onLoginSuccess: (token: string) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-    // State to track if we are in "Login" mode or "Sign Up" mode
+    // login vs signup mode
     const [isLogin, setIsLogin] = useState(true);
 
-    // State to track if we are using Phone Login instead of Email
+    // phone vs email mode
     const [isPhoneLogin, setIsPhoneLogin] = useState(false);
 
-    // Keeping all my form inputs in one place so it's cleaner
+    // form state
     const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '', phone: '', otp: '' });
 
-    // Toggles for showing/hiding the password text
+    // toggle password visibility
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Error message to show the user if something goes wrong
+    // error msg
     const [error, setError] = useState('');
 
-    // Loading state to disable buttons while we wait for the server
+    // loading spinner
     const [isLoading, setIsLoading] = useState(false);
 
-    // Success message for when things go right (like sending an OTP)
+    // success msg (e.g. otp sent)
     const [successMessage, setSuccessMessage] = useState('');
 
-    // Tracks if the OTP code has been sent to the user's phone
+    // otp sent status
     const [otpSent, setOtpSent] = useState(false);
 
-    // Helper function to update form data when the user types
+    // handle input changes
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // This effect sets up the Google Login button.
-    // It runs whenever we switch modes (like going to Phone login and back).
+    // init google login button
+    // runs when switching modes
     React.useEffect(() => {
-        // @ts-ignore
-        if (window.google && !isPhoneLogin) {
+        const initGoogle = () => {
             // @ts-ignore
-            window.google.accounts.id.initialize({
-                client_id: "1004303380810-vpe899e2sdqhike9s948q8146e5v9p37.apps.googleusercontent.com", // I need to put the real ID here later
-                callback: handleGoogleCallback
-            });
-            // @ts-ignore
-            window.google.accounts.id.renderButton(
-                document.getElementById("google-btn"),
-                { theme: "outline", size: "large", width: "100%" }
-            );
+            if (window.google && !isPhoneLogin) {
+                // @ts-ignore
+                window.google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleCallback
+                });
+                // @ts-ignore
+                window.google.accounts.id.renderButton(
+                    document.getElementById("google-btn"),
+                    { theme: "outline", size: "large", width: "100%" }
+                );
+            }
+        };
+
+        if (!isPhoneLogin) {
+            if (document.readyState === 'complete') {
+                initGoogle();
+            } else {
+                window.addEventListener('load', initGoogle);
+                return () => window.removeEventListener('load', initGoogle);
+            }
         }
     }, [isPhoneLogin]);
 
-    // What happens when Google says "Login Successful"
+    // google login success handler
     const handleGoogleCallback = async (response: any) => {
         try {
-            // Send the Google token to my backend to verify it
+            // verify token with backend
             const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,31 +84,31 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             });
             const data = await res.json();
             if (data.token) {
-                // If backend gives me a token, I'm logged in!
+                // success!
                 onLoginSuccess(data.token);
             } else {
-                setError("Google Login Failed");
+                setError(data.message || "Google Login Failed");
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error(err);
-            setError("Google Login Failed");
+            setError(err.message || "Google Login Failed");
         }
     };
 
-    // Special handler for the Phone Login flow
+    // phone login handler
     const handlePhoneSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
         try {
-            // If OTP is already sent, I need to verify it. If not, I need to send it.
-            const endpoint = otpSent ? '/otp/verify' : '/otp/send';
+            // send otp or verify it
+            const endpoint = otpSent ? '/api/auth/otp/verify' : '/api/auth/otp/send';
             const payload = otpSent
                 ? { phone: formData.phone, code: formData.otp }
                 : { phone: formData.phone };
 
-            const res = await fetch(`${API_BASE_URL}/api/auth${endpoint}`, {
+            const res = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -108,11 +119,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             if (!res.ok) throw new Error(data.message || 'Something went wrong');
 
             if (!otpSent) {
-                // Code sent! Now show the OTP input field
+                // otp sent, show input
                 setOtpSent(true);
                 setSuccessMessage(`Code sent to ${formData.phone}`);
             } else {
-                // Code verified! Log the user in
+                // verified!
                 onLoginSuccess(data.token);
             }
         } catch (err: any) {
@@ -122,31 +133,31 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    // Main handler for Email/Password Login and Register
+    // email/pass handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // If we are in phone mode, use the other function
+        // phone mode? use other handler
         if (isPhoneLogin) return handlePhoneSubmit(e);
 
         setIsLoading(true);
         setError('');
         setSuccessMessage('');
 
-        // Simple check to make sure passwords match during sign up
+        // check passwords match
         if (!isLogin && formData.password !== formData.confirmPassword) {
             setError("Passwords do not match.");
             setIsLoading(false);
             return;
         }
 
-        // Decide which backend endpoint to hit
-        const endpoint = isLogin ? '/login' : '/register';
+        // login or register endpoint
+        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
         const payload = isLogin
             ? { email: formData.email, password: formData.password }
             : { email: formData.email, password: formData.password, username: formData.username };
 
         try {
-            const response = await fetch(`${API_BASE_URL}/api/auth${endpoint}`, {
+            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
@@ -159,10 +170,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             }
 
             if (isLogin) {
-                // Login worked! Let the app know.
+                // login success
                 onLoginSuccess(data.token);
             } else {
-                // Registration worked! Ask them to sign in now.
+                // register success
                 setSuccessMessage('Welcome aboard! Please sign in to start your journey.');
                 setIsLogin(true);
             }
@@ -174,19 +185,19 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    // Styling for inputs to keep them consistent
+    // input styles
     const inputClasses = "mt-1 block w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3.5 transition duration-200 ease-in-out hover:shadow-md";
     const labelClasses = "block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 ml-1";
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 overflow-hidden relative">
-            {/* Background blobs to make it look fancy */}
+            {/* bg blobs */}
             <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
                 <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/30 rounded-full blur-[120px] animate-pulse"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-500/30 rounded-full blur-[120px] animate-pulse delay-1000"></div>
             </div>
 
-            {/* Main Card Container with entry animation */}
+            {/* main card */}
             <motion.div
                 initial={{ opacity: 0, y: 20, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -195,11 +206,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             >
                 <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl border border-white/40 dark:border-white/10 rounded-[2rem] shadow-2xl shadow-indigo-500/20 p-8 space-y-6 ring-1 ring-black/5">
                     <div className="flex justify-center mb-2">
-                        {/* The Logo component handles its own sizing */}
+                        {/* logo handles sizing */}
                         <Logo size="xxl" className="transform hover:scale-105 transition-transform duration-300" />
                     </div>
 
-                    {/* Animated Header Text */}
+                    {/* animated header */}
                     <AnimatePresence mode="wait">
                         <motion.h2
                             key={isPhoneLogin ? 'phone' : (isLogin ? 'login' : 'register')}
@@ -208,11 +219,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             exit={{ opacity: 0, y: 10 }}
                             className="text-center text-3xl font-black text-gray-900 dark:text-white tracking-tight"
                         >
-                            {isPhoneLogin ? (otpSent ? 'Enter Verification Code' : 'Mobile Access') : (isLogin ? 'Welcome Back, Legend!' : 'Join the Revolution')}
+                            {isPhoneLogin ? (otpSent ? 'Enter Verification Code' : 'Mobile Access') : (isLogin ? 'Welcome back' : 'Create your account')}
                         </motion.h2>
                     </AnimatePresence>
 
-                    {/* Error and Success Messages with slide animation */}
+                    {/* error/success msgs */}
                     <AnimatePresence>
                         {error && (
                             <motion.div
@@ -237,7 +248,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     </AnimatePresence>
 
                     <form className="space-y-5" onSubmit={handleSubmit}>
-                        {/* This AnimatePresence handles the sliding between different forms */}
+                        {/* form switching animation */}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={isPhoneLogin ? 'phone-form' : (isLogin ? 'login-form' : 'register-form')}
@@ -360,7 +371,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             </motion.div>
                         </AnimatePresence>
 
-                        {/* The main action button with hover effects */}
+                        {/* main action button */}
                         <motion.button
                             whileHover={{ scale: 1.02, translateY: -2 }}
                             whileTap={{ scale: 0.98 }}
@@ -423,6 +434,8 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             </button>
                         </p>
                     )}
+
+
                 </div>
             </motion.div>
         </div>

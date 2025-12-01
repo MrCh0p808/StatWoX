@@ -28,3 +28,20 @@ variable "JWT_SECRET" {
   sensitive   = true
   description = "The secret key for signing JWTs."
 }
+
+variable "db_username" {
+  type        = string
+  sensitive   = true
+  description = "Database master username"
+}
+
+variable "db_password" {
+  type        = string
+  sensitive   = true
+  description = "Database master password"
+}
+
+variable "google_client_id" {
+  type        = string
+  description = "Google OAuth Client ID"
+}

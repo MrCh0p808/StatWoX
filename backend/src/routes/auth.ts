@@ -2,14 +2,15 @@ import { Router } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
+import { OAuth2Client } from "google-auth-library";
+import { sendOtp, verifyOtp } from "../controllers/otp.js";
 
 const router = Router();
 const prisma = new PrismaClient();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// MOCK USER STORE (In-Memory)
-// I'm using this map to store users temporarily because the real database connection is flaky right now.
-// This lets me test the frontend without worrying about DB errors.
-const mockUsers = new Map<string, any>();
+// MOCK USER STORE REMOVED
+// We are now using the real database via Prisma.
 
 /**
  * POST /api/auth/register
@@ -19,26 +20,30 @@ router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    // Basic validation to make sure we have all the info
+    // check required fields
     if (!email || !password || !username) {
       return res.status(400).json({ message: "Missing fields" });
     }
 
-    // Checking if the email is already taken in our mock store
-    if (mockUsers.has(email)) {
+    // check if email exists
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
       return res.status(400).json({ message: "Email exists" });
     }
 
-    // Hashing the password so we don't store it in plain text (security best practice)
+    // hash password
     const hash = await bcrypt.hash(password, 10);
 
-    // Creating the new user object
-    const newUser = { id: `mock_${Date.now()}`, email, username, password: hash };
+    // create user
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        username,
+        password: hash,
+      },
+    });
 
-    // Saving it to our memory map
-    mockUsers.set(email, newUser);
-
-    console.log(`[MOCK REGISTER] User created: ${email}`);
+    console.log(`[REGISTER] User created: ${email} (${newUser.id})`);
 
     return res.status(201).json({ id: newUser.id });
   } catch (err: any) {
@@ -55,15 +60,15 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Looking up the user in our mock store
-    const user = mockUsers.get(email);
+    // find user
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Checking if the password matches the hash we stored
+    // verify password
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ message: "Invalid credentials" });
 
-    // Generating a JWT token so the user stays logged in
+    // generate token
     const token = jwt.sign(
       { userId: user.id, email: user.email },
       process.env.JWT_SECRET!,
@@ -77,12 +82,58 @@ router.post("/login", async (req, res) => {
   }
 });
 
+/**
+ * POST /api/auth/google
+ * Handles Google OAuth login.
+ */
+router.post("/google", async (req, res) => {
+  try {
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ message: "Missing credential" });
+
+    // verify token
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) return res.status(400).json({ message: "Invalid token" });
+
+    const { email, name, sub: googleId } = payload;
+
+    // find or create user
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // create new user
+      // password is required by schema, so generate a random one
+      const randomPassword = await bcrypt.hash(Math.random().toString(36), 10);
+      user = await prisma.user.create({
+        data: {
+          email,
+          username: name || `user_${googleId.slice(-4)}`,
+          password: randomPassword,
+        },
+      });
+    }
+
+    // generate token
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    return res.json({ token });
+  } catch (err: any) {
+    console.error("google login:", err);
+    res.status(500).json({ message: "Google login failed" });
+  }
+});
 
 /**
  * POST /api/auth/otp/send
  * Route to send the SMS code.
  */
-import { sendOtp, verifyOtp } from "../controllers/otp.js";
 router.post("/otp/send", sendOtp);
 
 /**

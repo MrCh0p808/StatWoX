@@ -75,6 +75,6 @@ resource "aws_s3_object" "frontend_dist" {
 resource "aws_s3_object" "configjs" {
   bucket       = aws_s3_bucket.frontend.id
   key          = "config.js"
-  content      = "window.STATWOX_API_URL = \"${aws_apigatewayv2_api.http.api_endpoint}\";"
+  content      = "window.STATWOX_API_URL = \"${aws_apigatewayv2_api.http.api_endpoint}\"; window.STATWOX_GOOGLE_CLIENT_ID = \"${var.google_client_id}\";"
   content_type = "application/javascript"
 }

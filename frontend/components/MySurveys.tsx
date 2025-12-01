@@ -22,16 +22,17 @@ interface CreationCardProps {
 const CreationCard: React.FC<CreationCardProps> = ({ title, description, icon, onClick, colorClass }) => (
     <button
         onClick={onClick}
-        className={`group w-full text-left p-6 bg-white dark:bg-gray-800 border border-gray-100 dark:border-white/10 rounded-3xl transition-all duration-300 transform hover:scale-[1.02] shadow-md hover:shadow-xl ${colorClass}`}
+        className={`group relative w-full flex flex-col items-center text-center p-8 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-3xl transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1 shadow-sm hover:shadow-2xl overflow-hidden ${colorClass}`}
     >
-        <div className="flex items-start">
-            <div className="p-4 bg-white/50 dark:bg-white/10 rounded-2xl mr-5 shadow-inner">
-                {icon}
-            </div>
-            <div>
-                <h3 className="font-black text-lg text-gray-900 dark:text-white mb-1">{title}</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-300 font-medium leading-relaxed">{description}</p>
-            </div>
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent to-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+        <div className="relative p-5 bg-gray-50 dark:bg-white/5 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+            {icon}
+        </div>
+
+        <div className="relative">
+            <h3 className="font-black text-xl text-gray-900 dark:text-white mb-2 tracking-tight">{title}</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-[12rem] mx-auto">{description}</p>
         </div>
     </button>
 );
@@ -154,38 +155,46 @@ export const MySurveys: React.FC<MySurveysProps> = ({ onNavigate }) => {
 
             {/* Creation Modal */}
             {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-md flex items-center justify-center z-50 p-4 transition-opacity duration-300">
-                    <div className="bg-white dark:bg-gray-900 border border-white/20 dark:border-gray-700 rounded-3xl w-full max-w-3xl p-10 relative shadow-2xl ring-1 ring-black/5 transform transition-all scale-100">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-fade-in">
+                    <div
+                        className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-[2.5rem] w-full max-w-4xl p-12 relative shadow-2xl ring-1 ring-black/5 transform transition-all animate-fade-in-up"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <button
                             onClick={() => setIsCreateModalOpen(false)}
-                            className="absolute top-6 right-6 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                            className="absolute top-8 right-8 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/10"
                         >
                             <XIcon />
                         </button>
-                        <h2 className="text-3xl font-black mb-3 text-center text-gray-900 dark:text-white">Create New</h2>
-                        <p className="text-center text-gray-500 dark:text-gray-400 mb-10 text-lg font-medium">Select the type of content you want to build</p>
+
+                        <div className="text-center mb-12">
+                            <h2 className="text-4xl font-black mb-4 text-gray-900 dark:text-white tracking-tight">Create New</h2>
+                            <p className="text-gray-500 dark:text-gray-400 text-lg font-medium max-w-md mx-auto">
+                                Choose a format to start gathering insights from your audience.
+                            </p>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <CreationCard
                                 title="Form"
-                                description="Registration & data collection."
-                                icon={<DocumentTextIcon className="w-8 h-8 text-blue-600 dark:text-blue-400 mr-0" />}
+                                description="Capture data, registrations, and applications."
+                                icon={<DocumentTextIcon className="w-10 h-10 text-blue-600 dark:text-blue-400" />}
                                 onClick={() => handleCreateStart('form')}
-                                colorClass="hover:shadow-blue-500/20 hover:border-blue-200 dark:hover:border-blue-800"
+                                colorClass="hover:border-blue-500/50 hover:shadow-blue-500/20 dark:hover:bg-blue-500/10"
                             />
                             <CreationCard
                                 title="Survey"
-                                description="Research & deep feedback."
-                                icon={<svg className="w-8 h-8 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>}
+                                description="Deep research with logic and branching."
+                                icon={<svg className="w-10 h-10 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>}
                                 onClick={() => handleCreateStart('survey')}
-                                colorClass="hover:shadow-purple-500/20 hover:border-purple-200 dark:hover:border-purple-800"
+                                colorClass="hover:border-purple-500/50 hover:shadow-purple-500/20 dark:hover:bg-purple-500/10"
                             />
                             <CreationCard
                                 title="Poll"
-                                description="Quick single-question vote."
-                                icon={<svg className="w-8 h-8 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
+                                description="Quick single-question voting for instant engagement."
+                                icon={<svg className="w-10 h-10 text-pink-600 dark:text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>}
                                 onClick={() => handleCreateStart('poll')}
-                                colorClass="hover:shadow-pink-500/20 hover:border-pink-200 dark:hover:border-pink-800"
+                                colorClass="hover:border-pink-500/50 hover:shadow-pink-500/20 dark:hover:bg-pink-500/10"
                             />
                         </div>
                     </div>

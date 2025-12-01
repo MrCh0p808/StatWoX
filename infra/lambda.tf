@@ -33,9 +33,10 @@ resource "aws_lambda_function" "submit" {
 
   environment {
     variables = {
-      DATABASE_URL   = var.DATABASE_URL
-      JWT_SECRET     = var.JWT_SECRET
-      ALLOWED_ORIGIN = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
+      DATABASE_URL     = var.DATABASE_URL
+      JWT_SECRET       = var.JWT_SECRET
+      GOOGLE_CLIENT_ID = var.google_client_id
+      ALLOWED_ORIGIN   = "*" # Temporarily allow all origins for dev/testing
     }
   }
   timeout    = 10

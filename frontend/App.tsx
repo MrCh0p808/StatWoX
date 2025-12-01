@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Login } from './components/Login';
@@ -9,6 +9,7 @@ import { Profile } from './components/Profile';
 import { Builder } from './components/Builder';
 import { Responder } from './components/Responder';
 import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { API_BASE_URL } from './constants';
 import type { View, SurveyCategory, Notification } from './types';
 
 const App: React.FC = () => {
@@ -43,6 +44,29 @@ const App: React.FC = () => {
       setIsAuthenticated(true);
     }
   }, []);
+
+  // Fetch notifications when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchNotifications = async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/notifications`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('statwox_token')}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setNotifications(data);
+          }
+        } catch (e) {
+          console.error("Failed to fetch notifications", e);
+        }
+      };
+      fetchNotifications();
+      // Poll every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   // Called when the Login component says "Success!"
   const handleLoginSuccess = (token: string) => {
@@ -116,9 +140,18 @@ const App: React.FC = () => {
           />
         )}
         <main className={`flex-1 overflow-y-auto hide-scrollbar bg-gray-200/50 dark:bg-transparent relative`}>
-          <div key={activeView} className="fade-in min-h-full">
-            {renderContent()}
-          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeView}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="min-h-full"
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
         </main>
       </div>
     </div>
