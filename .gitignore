@@ -92,3 +92,9 @@ Thumbs.db
 
 # --- Lambda Bundles ---
 *.zip
+
+# --- Miscellaneous ---
+DEPLOY.md
+QA_REPORT.md
+VERIFICATION_GUIDE.md 
+infra/.envrc.example
