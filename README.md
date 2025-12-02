@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="frontend/public/assets/logo.svg" width="600" alt="StatWoX Logo"/>
+  <img src="frontend/public/assets/logo.svg" width="800" alt="StatWoX Logo"/>
 </div>
 <div align="center">
 <h3><b><i>Let The Stat Work Out Your Decision Making</i></b></h3>
@@ -843,6 +843,7 @@ refactor(builder): extract drag/drop logic
 [🔼 Back to Top](#table-of-contents)
 
 ---
+
 
 
 
