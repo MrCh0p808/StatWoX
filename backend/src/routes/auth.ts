@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
 import { sendOtp, verifyOtp } from "../controllers/otp.js";
+import axios from 'axios';
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -16,39 +17,46 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
  * POST /api/auth/register
  * This route handles new user sign-ups.
  */
-router.post("/register", async (req, res) => {
+// POST /api/auth/google
+// body: { credential: "<id_token from client>" }
+router.post("/google", async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { credential } = req.body;
+    if (!credential) return res.status(400).json({ message: "Missing credential" });
 
-    // check required fields
-    if (!email || !password || !username) {
-      return res.status(400).json({ message: "Missing fields" });
+    // Verify using Google's tokeninfo endpoint
+    const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
+    const resp = await axios.get(verifyUrl);
+    const payload = resp.data;
+
+    // Validate audience
+    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
+      console.warn("Google token audience mismatch", payload.aud);
+      return res.status(401).json({ message: "Invalid Google token (aud mismatch)" });
     }
 
-    // check if email exists
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email exists" });
+    const email = payload.email;
+    const sub = payload.sub; // google user id
+    if (!email || !sub) return res.status(400).json({ message: "Invalid token payload" });
+
+    // Find or create user
+    let user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          email,
+          username: email.split("@")[0],
+          password: await bcrypt.hash(Math.random().toString(36), 10), // Random password for OAuth users
+        }
+      });
     }
 
-    // hash password
-    const hash = await bcrypt.hash(password, 10);
-
-    // create user
-    const newUser = await prisma.user.create({
-      data: {
-        email,
-        username,
-        password: hash,
-      },
-    });
-
-    console.log(`[REGISTER] User created: ${email} (${newUser.id})`);
-
-    return res.status(201).json({ id: newUser.id });
+    // issue JWT
+    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+    return res.json({ token, user: { id: user.id, email: user.email, username: user.username } });
   } catch (err: any) {
-    console.error("register:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("googleAuth:", err?.response?.data || err.message || err);
+    return res.status(500).json({ message: "Google auth verification failed" });
   }
 });
 

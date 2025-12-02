@@ -1,18 +1,3 @@
-resource "aws_apigatewayv2_api" "http" {
-  name          = "${var.project}-api"
-  protocol_type = "HTTP"
-
-  cors_configuration {
-    allow_headers = ["Content-Type", "Authorization"]
-    allow_methods = ["GET", "POST", "OPTIONS", "PUT", "DELETE"]
-    allow_origins = ["*"] # For development; restrict this in production
-  }
-}
-
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id                 = aws_apigatewayv2_api.http.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.submit.arn
   payload_format_version = "2.0"
 }
 

@@ -24,30 +24,41 @@ export const createSurvey = async (req: AuthRequest, res: Response) => {
     const survey = await prisma.survey.create({
       data: {
         title,
-        description,
-        category: category || "survey",
+        description: description ?? "",
+        category: category ?? "survey",
+        status: "Draft",
         authorId: userId,
         questions: {
-          create: questions.map((q: any, index: number) => ({
-            text: q.title,
+          create: questions.map((q: any, idx: number) => ({
+            text: q.title || q.text || "Untitled question",
             type: q.type,
-            helpText: q.helpText,
-            required: q.required,
-            order: index,
-            options: {
-              create: q.options?.map((opt: string) => ({ text: opt })) || [],
-            },
-          })),
-        },
+            helpText: q.helpText ?? q.help ?? "",
+            required: !!q.required,
+            order: idx,
+            options: q.options && Array.isArray(q.options) ? {
+              create: q.options.map((opt: string) => ({ text: opt }))
+            } : undefined
+          }))
+        }
       },
       include: {
         questions: {
-          include: { options: true },
-        },
-      },
+          include: { options: true }
+        }
+      }
     });
 
-    res.status(201).json({ id: survey.id });
+    // return the created survey in a frontend-friendly shape
+    const output = {
+      id: survey.id,
+      title: survey.title,
+      description: survey.description,
+      status: survey.status,
+      author: userId,
+      responses: survey.responseCount ?? 0,
+      questions: survey.questions?.map(mapQuestionToFrontend)
+    };
+    return res.status(201).json(output);
   } catch (error: any) {
     console.error("createSurvey error:", error);
     res.status(500).json({ message: "Failed to create survey" });
@@ -72,10 +83,11 @@ export const listSurveys = async (req: AuthRequest, res: Response) => {
     const formatted = surveys.map((s) => ({
       id: s.id,
       title: s.title,
+      description: s.description,
       responses: s._count.responses,
       status: s.status,
       category: s.category,
-      author: "Me", // Since it's my list
+      author: s.authorId,
     }));
 
     res.json(formatted);

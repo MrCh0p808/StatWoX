@@ -2,7 +2,7 @@ resource "aws_rds_cluster" "default" {
   cluster_identifier  = "${var.project}-aurora-cluster"
   engine              = "aurora-postgresql"
   engine_mode         = "provisioned"
-  engine_version      = "13.6"
+  engine_version      = "16.1"
   database_name       = "statwox"
   master_username     = var.db_username
   master_password     = var.db_password
@@ -18,7 +18,7 @@ resource "aws_rds_cluster" "default" {
 
 resource "aws_rds_cluster_instance" "default" {
   cluster_identifier  = aws_rds_cluster.default.id
-  identifier      = "${var.project}-aurora-instance"
+  identifier          = "${var.project}-aurora-instance"
   engine              = aws_rds_cluster.default.engine
   engine_version      = aws_rds_cluster.default.engine_version
   instance_class      = "db.serverless"
