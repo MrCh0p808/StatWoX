@@ -5,7 +5,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
+    "test:auth": "node tests/test_auth.js",
+    "test:backend": "node tests/test_backend.cjs",
     "build": "node build.js && node ./scripts/copy-prisma-to-dist.js",
     "dev": "nodemon --watch src --exec tsx src/index.ts",
     "postinstall": "npx prisma generate"

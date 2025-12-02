@@ -9,6 +9,10 @@ resource "aws_rds_cluster" "default" {
   skip_final_snapshot = true
   apply_immediately   = true
 
+  # Networking
+  db_subnet_group_name   = aws_db_subnet_group.default.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+
   # Serverless v2 Scaling Configuration
   serverlessv2_scaling_configuration {
     min_capacity = 0.5
