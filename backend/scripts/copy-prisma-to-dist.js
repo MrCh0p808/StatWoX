@@ -1,7 +1,5 @@
 const fs = require('fs-extra');
 const path = require('path');
-const fs = require('fs-extra');
-const path = require('path');
 
 const dist = path.resolve(__dirname, '../dist');
 const prismaClient = path.resolve(__dirname, '../node_modules/@prisma/client');
