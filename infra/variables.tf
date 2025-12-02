@@ -49,5 +49,5 @@ variable "google_client_id" {
 variable "allowed_origins" {
   type        = list(string)
   default     = ["*"]
-  description = "List of CORS allowed origins. For production set to cloudfront domain."
+  description = "CORS allowed origins (e.g. CloudFront domain)"
 }

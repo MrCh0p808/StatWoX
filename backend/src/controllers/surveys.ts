@@ -4,7 +4,7 @@ import { AuthRequest } from "../middleware/auth.js";
 
 const prisma = new PrismaClient();
 
-// Helper to map DB question to Frontend question
+// Map DB question to frontend shape
 const mapQuestionToFrontend = (q: any) => ({
   id: q.id,
   type: q.type,
@@ -48,7 +48,7 @@ export const createSurvey = async (req: AuthRequest, res: Response) => {
       }
     });
 
-    // return the created survey in a frontend-friendly shape
+    // Return frontend-friendly shape
     const output = {
       id: survey.id,
       title: survey.title,
@@ -134,14 +134,13 @@ export const updateSurvey = async (req: AuthRequest, res: Response) => {
     const { title, description, questions } = req.body;
     const userId = req.userId;
 
-    // check if i own this
+    // Ownership check
     const existing = await prisma.survey.findUnique({ where: { id } });
     if (!existing || existing.authorId !== userId) {
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    // update details and swap questions
-    // destructive update, but simpler for now
+    // Full replace transaction
     await prisma.$transaction([
       prisma.questionOption.deleteMany({ where: { question: { surveyId: id } } }),
       prisma.question.deleteMany({ where: { surveyId: id } }),
@@ -216,7 +215,7 @@ export const publishSurvey = async (req: AuthRequest, res: Response) => {
 export const submitResponse = async (req: any, res: Response) => {
   try {
     const { id } = req.params;
-    const payload = req.body; // The answers
+    const payload = req.body;
 
     // 1. Verify survey exists
     const survey = await prisma.survey.findUnique({ where: { id } });
@@ -230,7 +229,7 @@ export const submitResponse = async (req: any, res: Response) => {
       },
     });
 
-    // 3. Increment count (Atomic)
+    // 3. Increment count
     await prisma.survey.update({
       where: { id },
       data: { responseCount: { increment: 1 } },

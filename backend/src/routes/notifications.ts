@@ -1,7 +1,7 @@
 import { Router } from "express";
 const router = Router();
 
-// Simple notifications endpoint (for MVP: returns mocked notifications)
+// Mock notifications for MVP
 router.get("/", (req, res) => {
     const notifications = [
         { id: '1', title: 'New Response', message: 'You got a new response on "Customer Satisfaction"', time: '2m ago', read: false, type: 'success' },

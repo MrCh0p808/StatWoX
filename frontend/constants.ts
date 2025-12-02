@@ -1,12 +1,23 @@
-
 import type { Survey } from './types';
 
-// Mock data removed. Use API instead.
+// Resolve backend URL from config.js (prod) or fallback to localhost (dev)
+function resolveApiBase() {
+    // @ts-ignore
+    const injected = (window as any).STATWOX_API_URL;
+    if (injected && typeof injected === 'string' && injected.length > 0) {
+        return injected.replace(/\/$/, '');
+    }
 
-// --- GLOBAL CONFIG ---
-// BACKEND NOTE: Change this URL to point to your real backend server (e.g., http://localhost:3000 or your cloud URL).
-// @ts-ignore
-export const API_BASE_URL = window.STATWOX_API_URL || 'http://localhost:5000';
+    if (process.env.NODE_ENV === 'development') {
+        console.warn("Using localhost fallback");
+        return 'http://localhost:5000';
+    }
+
+    console.error("API URL missing in production");
+    return '';
+}
+
+export const API_BASE_URL = resolveApiBase();
 
 // @ts-ignore
 export const GOOGLE_CLIENT_ID = window.STATWOX_GOOGLE_CLIENT_ID || process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
