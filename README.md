@@ -388,5 +388,4 @@ fix(api): resolve survey fetch bug
 
 ```
 
----
 
