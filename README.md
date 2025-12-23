@@ -33,7 +33,7 @@
 StatWoX is a modern open source forms and surveys platform.  
 Think Google Forms for usability, Typeform for presentation, and a clean serverless backend designed for developers.
 
-It allows you to create surveys, share them instantly, collect responses, analyze insights, and export data to Google Drive or local storage.
+It allows you to create surveys, share them instantly, collect responses, analyze insights, and export data.
 
 Simple concept. Focused execution.
 
@@ -76,16 +76,15 @@ StatWoX is an open source surveys and forms platform that combines:
 
 Core capabilities include:
 
-1. User authentication
-2. Personal dashboard for managing surveys
-3. Public discovery feed
-4. Survey, poll, and form creation
-5. Serverless backend running on AWS Lambda
-6. PostgreSQL database via Prisma ORM
-7. CloudFront-powered global delivery
-8. Infrastructure fully managed using Terraform
+1. **User Authentication**: Secure Google OAuth login with JWT session management.
+2. **Personal Dashboard**: Manage, edit, and track your surveys in one place.
+3. **Survey Engine**: Create dynamic surveys with various question types (text, multiple choice, rating, etc.).
+4. **Serverless Backend**: Runs entirely on AWS Lambda, scaling to zero when idle.
+5. **PostgreSQL Database**: Data stored reliably in Aurora Serverless v2 via Prisma ORM.
+6. **Global Delivery**: Frontend cached and delivered via CloudFront Edge locations.
+7. **Infrastructure as Code**: Entire stack provisioned and managed via Terraform.
 
-Built to be scalable, reliable, and fast.
+Built to be scalable, reliable, and cost-efficient.
 
 [Back to Top](#table-of-contents)
 
@@ -97,38 +96,96 @@ Built to be scalable, reliable, and fast.
 <summary><b>Click to expand architecture diagram</b></summary>
 
 ```mermaid
-flowchart LR
-    subgraph CLIENT["Client Layer"]
-        UI["React Frontend"]
-        ConfigJS["config.js"]
+flowchart TB
+    subgraph CLIENT["User Layer"]
+        User["End User"]
+        Browser["Web Browser<br/>(Chrome/Safari/Edge)"]
+        User --> Browser
     end
-    subgraph CDN["Static Hosting"]
-        CF["CloudFront"]
-        S3["S3 Bucket"]
+
+    subgraph FRONTEND["Frontend (Presentation)"]
+        direction TB
+        Vite["Vite Build System"]
+        React["React 19 App"]
+        Config["Runtime Config<br/>(config.js)"]
+        Tailwind["TailwindCSS"]
+        Framer["Framer Motion"]
+        
+        Browser --> React
+        React --> Config
     end
-    subgraph API["Backend API"]
-        APIGW["API Gateway"]
-        Backend["Node + Express on Lambda"]
-        AuthController["Auth Controller"]
-        SurveyController["Survey Controller"]
-        FeedController["Feed Controller"]
+
+    subgraph CDN["Edge Network (Content Delivery)"]
+        CF["CloudFront Distribution<br/>(Global Edge Locations)"]
+        S3["S3 Bucket<br/>(Static Assets Origin)"]
+        
+        React -.->|Fetch Assets| CF
+        CF -->|OAC Auth| S3
     end
-    subgraph DB["Database"]
-        Postgres["PostgreSQL"]
-        Prisma["Prisma ORM"]
+
+    subgraph BACKEND["Backend (Compute)"]
+        direction TB
+        APIGW["API Gateway HTTP API<br/>(v2 Proxy Integration)"]
+        
+        subgraph LAMBDA["AWS Lambda (ExecutionContext)"]
+            Node["Node.js 20 Runtime"]
+            Express["Express.js App"]
+            Adapter["Serverless-HTTP Adapter"]
+            
+            subgraph CONTROLLERS["Controllers"]
+                Auth["Auth Logic<br/>(Google/JWT)"]
+                Survey["Survey Logic<br/>(CRUD)"]
+                Feed["Feed Logic"]
+            end
+        end
+        
+        Browser -->|API JSON| APIGW
+        APIGW -->|Payload| Adapter
+        Adapter --> Express
+        Express --> Auth
+        Express --> Survey
+        Express --> Feed
     end
-    UI --> CF
-    CF --> S3
-    UI --> APIGW
-    APIGW --> Backend
-    Backend --> AuthController
-    Backend --> SurveyController
-    Backend --> FeedController
-    AuthController --> Prisma
-    SurveyController --> Prisma
-    FeedController --> Prisma
-    Prisma --> Postgres
-````
+
+    subgraph DATA["Data Persistence"]
+        Prisma["Prisma ORM Client<br/>(Linux Binary)"]
+        QueryEngine["Query Engine<br/>(Rust Binding)"]
+        Aurora["Amazon Aurora Serverless v2<br/>(PostgreSQL)"]
+        
+        Auth --> Prisma
+        Survey --> Prisma
+        Feed --> Prisma
+        Prisma --> QueryEngine
+        QueryEngine -->|TCP/IP| Aurora
+    end
+
+    subgraph OBSERVE["Observability & Monitoring"]
+        CW["CloudWatch Logs<br/>(/aws/lambda/statwox-submit)"]
+        Metrics["CloudWatch Metrics<br/>(Errors, Duration, Throttles)"]
+        Alarms["CloudWatch Alarms<br/>(5xx Errors)"]
+     
+        Node -.->|Stdout/Stderr| CW
+        APIGW -.->|Access Logs| CW
+        CW -.-> Metrics
+        Metrics -.-> Alarms
+    end
+    
+    subgraph AUTH_EXT["External Identity"]
+        Google["Google Identity Services<br/>(OAuth 2.0)"]
+        Browser -.->|OIDC Flow| Google
+        Auth -.->|Verify Token| Google
+    end
+
+    subgraph IAC["Infrastructure as Code"]
+        TF["Terraform"]
+        State["Terraform State<br/>(Local/Remote)"]
+        
+        TF -->|Provisions| APIGW
+        TF -->|Provisions| Aurora
+        TF -->|Provisions| LAMBDA
+        TF -->|Provisions| CF
+    end
+```
 
 </details>
 
@@ -143,37 +200,33 @@ flowchart LR
 
 ### Frontend
 
-* React 19 with TypeScript
-* Built using Vite
-* Tailwind CSS for styling
-* Hosted on S3 and served via CloudFront
-* Runtime configuration injected through config.js
-* JWT stored in localStorage
-* Animations handled using Framer Motion
+* **React 19**: Utilizing the latest features for optimal performance and concurrent rendering.
+* **TypeScript**: Strict typing ensures codebase reliability and developer productivity.
+* **Vite**: Ultra-fast build tool and dev server.
+* **Tailwind CSS**: Utility-first styling for rapid UI development.
+* **Framer Motion**: Smooth, complex animations for a premium user feel.
+* **Runtime Config**: Environment variables injected via `config.js` at runtime, ensuring "build once, deploy anywhere".
 
 ### Backend
 
-* Express.js running inside AWS Lambda
-* API Gateway in proxy mode
-* JWT-based authentication
-* Prisma ORM with PostgreSQL
-* No long-running servers
+* **Serverless Express**: Express.js application wrapped with `serverless-http` to run seamlessly on AWS Lambda.
+* **Google OAuth**: Secure server-side verification of Google ID tokens using `google-auth-library`.
+* **Prisma ORM**: Type-safe database access. (Binaries are manually copied to `dist/` to ensure compatibility with Amazon Linux 2).
+* **Stateless**: No sessions stored in memory; relies on JWTs signed with a secure secret.
 
 ### Infrastructure
 
-* Provisioned entirely using Terraform
-* Secure S3 bucket with CloudFront OAC
-* Lambda bundled using esbuild
-* Environment variables injected at deploy time
+* **Terraform Managed**: 100% of the infrastructure (VPC, Lambda, DB, CDN) is defined in HCL.
+* **VPC Isolation**: Database resides in a private subnet, inaccessible from the public internet.
+* **CloudFront OAC**: Secure S3 access using Origin Access Control, ensuring users only access files via the CDN.
+* **Aurora Serverless v2**: Automatically scales compute capacity based on load, pausing costs during inactivity.
 
 ### Build and Deploy Flow
 
-1. Frontend built using Vite
-2. Backend bundled using esbuild
-3. Terraform provisions infrastructure
-4. Static assets uploaded to S3
-5. Lambda deployed
-6. API and CDN URLs injected into config.js
+1. **Frontend**: Built via Vite (`npm run build`) -> `dist/` -> Sync to S3.
+2. **Backend**: Bundled via esbuild (`build.js`) -> `lambda.zip` (includes Prisma binaries) -> Upload to Lambda.
+3. **Terraform**: `terraform apply` manages state and updates AWS resources.
+4. **Config Injection**: Terraform outputs API URL and Client ID -> `config.js` uploaded to S3.
 
 </details>
 
@@ -188,12 +241,13 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    Entry["server.ts"] --> Middleware
-    Middleware --> Routes
-    Routes --> Controllers
-    Controllers --> Services
-    Services --> Prisma
-    Prisma --> PostgreSQL
+    Entry["lambda.ts<br/>(Handler Entry)"] --> Express["app.ts<br/>(Express App)"]
+    Express --> Middleware["Middleware<br/>(CORS, Auth Guard)"]
+    Middleware --> Routes["Routes<br/>(/auth, /surveys)"]
+    Routes --> Controllers["Controllers<br/>(Business Logic)"]
+    Controllers --> PrismaClient["Prisma Client<br/>(Data Access)"]
+    PrismaClient --> QueryEngine["Prisma Query Engine<br/>(Rust Binary)"]
+    QueryEngine --> PostgreSQL["PostgreSQL Connections"]
 ```
 
 </details>
@@ -209,31 +263,20 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    Terraform --> S3
-    Terraform --> CloudFront
-    Terraform --> API_Gateway
-    Terraform --> Lambda
-    Lambda --> PostgreSQL
-```
-
-</details>
-
-[Back to Top](#table-of-contents)
-
----
-
-## <span id="cicd-pipeline">CI/CD Pipeline</span>
-
-<details>
-<summary><b>Click to expand</b></summary>
-
-```mermaid
-flowchart LR
-    Commit --> GitHub
-    GitHub --> CI
-    CI --> Build
-    Build --> Terraform
-    Terraform --> Deploy
+    TF[Terraform State] --> VPC[VPC & Networking]
+    TF --> S3[S3 Bucket]
+    TF --> CF[CloudFront Distribution]
+    TF --> APIGW[API Gateway]
+    TF --> Lambda[Lambda Function]
+    TF --> RDS[Aurora RDS Cluster]
+    
+    subgraph VPC_Config
+        VPC --> PubSub[Public Subnets]
+        VPC --> PrivSub[Private Subnets]
+        PubSub --> IGW[Internet Gateway]
+        PrivSub --> RDS
+        Lambda -->|ENI| PrivSub
+    end
 ```
 
 </details>
@@ -249,10 +292,22 @@ flowchart LR
 
 ```mermaid
 sequenceDiagram
-    User->>Frontend: Login request
-    Frontend->>Backend: POST /auth/login
-    Backend->>DB: Validate credentials
-    Backend->>Frontend: JWT token
+    participant User
+    participant Frontend
+    participant Backend
+    participant Google
+    participant DB
+
+    User->>Frontend: Clicks "Sign in with Google"
+    Frontend->>Google: Pop-up Login Flow
+    Google-->>Frontend: Returns ID Token
+    Frontend->>Backend: POST /api/auth/google<br/>{ credential: ID_TOKEN }
+    Backend->>Google: Verify Token Integrity<br/>(Audience Check)
+    Google-->>Backend: Token Valid + User Payload
+    Backend->>DB: Prisma Upsert User<br/>(Create if new)
+    DB-->>Backend: User Record
+    Backend->>Frontend: Return Signed JWT
+    Frontend->>Frontend: Store JWT in LocalStorage
 ```
 
 </details>
@@ -268,10 +323,15 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    User --> Frontend
-    Frontend --> Backend
-    Backend --> Prisma
-    Prisma --> Database
+    User -->|Input Form| Frontend
+    Frontend -->|POST /api/surveys| APIGW
+    APIGW -->|Proxy| Lambda
+    Lambda -->|Auth Check| MiddlewareJWT
+    MiddlewareJWT -->|Valid| Controller
+    Controller -->|Prisma Create| DB
+    DB -->|Survey ID| Lambda
+    Lambda -->|JSON Response| Frontend
+    Frontend -->|Redirect| SurveyBuilder
 ```
 
 </details>
@@ -282,13 +342,13 @@ flowchart LR
 
 ## <span id="tech-stack">Tech Stack</span>
 
-| Category       | Tools                                   |
-| -------------- | --------------------------------------- |
-| Frontend       | React, TypeScript, Vite, Tailwind       |
-| Backend        | Node.js, Express, Prisma                |
-| Database       | PostgreSQL                              |
-| Infrastructure | AWS Lambda, API Gateway, S3, CloudFront |
-| IaC            | Terraform                               |
+| Frontend | Backend | Infrastructure | Tools |
+| :---: | :---: | :---: | :---: |
+| <img src="https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" /> | <img src="https://img.shields.io/badge/Node.js_20-43853D?style=for-the-badge&logo=node.js&logoColor=white" /> | <img src="https://img.shields.io/badge/AWS_Lambda-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white" /> | <img src="https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white" /> |
+| <img src="https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white" /> | <img src="https://img.shields.io/badge/Express.js-404D59?style=for-the-badge&logo=express&logoColor=white" /> | <img src="https://img.shields.io/badge/API_Gateway-FF4F8B?style=for-the-badge&logo=amazon-api-gateway&logoColor=white" /> | <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" /> |
+| <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" /> | <img src="https://img.shields.io/badge/Prisma_ORM-2D3748?style=for-the-badge&logo=prisma&logoColor=white" /> | <img src="https://img.shields.io/badge/CloudFront-D05C42?style=for-the-badge&logo=amazon-aws&logoColor=white" /> | <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white" /> |
+| <img src="https://img.shields.io/badge/Framer_Motion-0055FF?style=for-the-badge&logo=framer&logoColor=white" /> | <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" /> | <img src="https://img.shields.io/badge/Amazon_S3-569A31?style=for-the-badge&logo=amazon-s3&logoColor=white" /> | <img src="https://img.shields.io/badge/ESBuild-FFCF00?style=for-the-badge&logo=javascript&logoColor=white" /> |
+| | <img src="https://img.shields.io/badge/JWT-Auth-black?style=for-the-badge&logo=json-web-tokens&logoColor=white" /> | <img src="https://img.shields.io/badge/Aurora_v2-527FFF?style=for-the-badge&logo=amazon-rds&logoColor=white" /> | <img src="https://img.shields.io/badge/Google_Auth-4285F4?style=for-the-badge&logo=google&logoColor=white" /> |
 
 [Back to Top](#table-of-contents)
 
@@ -299,14 +359,14 @@ flowchart LR
 <details>
 <summary><b>Click to expand</b></summary>
 
-### Clone Repository
+### 1. Clone Repository
 
 ```bash
 git clone https://github.com/MrCh0p808/StatWoX.git
 cd StatWoX
 ```
 
-### Backend Setup
+### 2. Backend Setup
 
 ```bash
 cd backend
@@ -316,18 +376,18 @@ npm install
 Create `.env`:
 
 ```
-DATABASE_URL=postgresql://user:pass@localhost:5432/statwox
-JWT_SECRET=your_secret
+DATABASE_URL="postgresql://user:pass@localhost:5432/statwox?schema=public"
+JWT_SECRET="your_local_secret"
+GOOGLE_CLIENT_ID="your_google_client_id"
 ```
 
-Run migrations and start:
+Start the local server (uses `nodemon`):
 
 ```bash
-npx prisma migrate dev
 npm run dev
 ```
 
-### Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
@@ -335,13 +395,54 @@ npm install
 npm run dev
 ```
 
-Add `config.js`:
-
-```js
-window.STATWOX_API_URL = "http://localhost:5000"
-```
+The frontend will proxy API requests to `http://localhost:5000` via Vite config.
 
 </details>
+
+[Back to Top](#table-of-contents)
+
+---
+
+## <span id="production-deployment-terraform">Production Deployment (Terraform)</span>
+
+<details>
+<summary><b>Click to expand</b></summary>
+
+1. **Build Backend**:
+   ```bash
+   cd backend && node build.js
+   ```
+   *(This script handles bundling and copying Prisma binaries)*
+
+2. **Build Frontend**:
+   ```bash
+   cd frontend && npm run build
+   ```
+
+3. **Deploy Infra**:
+   ```bash
+   cd infra
+   terraform init
+   terraform apply
+   ```
+   *(Enter your DB credentials and secrets when prompted)*
+
+4. **Upload Config**:
+   The Terraform output will provide the API URL. Update `config.js` in the S3 bucket.
+
+</details>
+
+[Back to Top](#table-of-contents)
+
+---
+
+## <span id="api-reference">API Reference</span>
+
+*   `POST /api/auth/google`: Exchange Google ID token for Session JWT.
+*   `GET /api/surveys`: List user's surveys.
+*   `POST /api/surveys`: Create a new survey.
+*   `GET /api/surveys/:id`: Get full survey details.
+*   `POST /api/surveys/:id/responses`: Submit a survey response (public).
 
 [Back to Top](#table-of-contents)
 
@@ -351,23 +452,12 @@ window.STATWOX_API_URL = "http://localhost:5000"
 
 Branch naming:
 
-* feat/*
-* fix/*
-* refactor/*
-* infra/*
+* `feat/*`: New features
+* `fix/*`: Bug fixes
+* `infra/*`: Terraform changes
+* `docs/*`: Documentation updates
 
-Commit format:
-
-```
-type(scope): message
-```
-
-Examples:
-
-```
-feat(auth): add google login
-fix(api): resolve survey fetch bug
-```
+Commit format implies clear intent.
 
 [Back to Top](#table-of-contents)
 
@@ -377,15 +467,10 @@ fix(api): resolve survey fetch bug
 
 ### v1.0.0
 
-* React frontend
-* Serverless backend
-* Prisma database models
-* Terraform-managed infrastructure
-* JWT authentication
-* Survey creation and response flow
+*   **Core**: Initial release.
+*   **Feature**: Google OAuth Integration.
+*   **Feature**: Complete Survey Builder UI.
+*   **Infra**: Full Terraform deployment suite.
+*   **Fix**: Resolved Prisma binary compatibility for AWS Lambda (Amazon Linux 2).
 
 [Back to Top](#table-of-contents)
-
-```
-
-
