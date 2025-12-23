@@ -4,52 +4,61 @@ import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 import { OAuth2Client } from "google-auth-library";
 import { sendOtp, verifyOtp } from "../controllers/otp.js";
-import axios from 'axios';
 
 const router = Router();
 const prisma = new PrismaClient();
+
+if (!process.env.GOOGLE_CLIENT_ID) {
+  throw new Error('GOOGLE_CLIENT_ID environment variable is not set');
+}
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Google Auth: Verify token and return JWT
+// I verify the token securely with Google's library here to check who the user is
 router.post("/google", async (req, res) => {
+  const { credential } = req.body;
+  if (!credential) return res.status(400).json({ message: "Missing Google credential" });
+
   try {
-    const { credential } = req.body;
-    if (!credential) return res.status(400).json({ message: "Missing credential" });
+    // checking the token against my client id to make sure it's valid
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
 
-    // Verify via Google tokeninfo
-    const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`;
-    const resp = await axios.get(verifyUrl);
-    const payload = resp.data;
-
-    if (payload.aud !== process.env.GOOGLE_CLIENT_ID) {
-      console.warn("Audience mismatch", payload.aud);
-      return res.status(401).json({ message: "Invalid token audience" });
+    if (!payload || !payload.email) {
+      return res.status(400).json({ message: "Invalid Google Token: No email found" });
     }
 
-    const { email, sub } = payload;
-    if (!email || !sub) return res.status(400).json({ message: "Invalid payload" });
+    const { email, name, sub } = payload;
 
-    // Find or create user
-    let user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email,
-          username: email.split("@")[0],
-          password: await bcrypt.hash(Math.random().toString(36), 10),
-        }
-      });
-    }
+    // using upsert here so I don't need to check if the user exists first - it handles finding or creating automatically
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {}, // if they are already here, I just log them in without changing anything
+      create: {
+        username: (name || "google_user").replace(/\s+/g, "") + "_" + (sub || "").slice(-5),
+        email,
+        password: "GOOGLE_USER_NO_PASSWORD", // setting a dummy password since they logged in with google, they can set a real one later if they want
+      }
+    });
 
-    const token = jwt.sign({ userId: user.id, email: user.email }, process.env.JWT_SECRET!, { expiresIn: "7d" });
+    console.log(`[GOOGLE LOGIN] User: ${email} (${user.id})`);
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
     return res.json({ token, user: { id: user.id, email: user.email, username: user.username } });
   } catch (err: any) {
-    console.error("Google auth error:", err?.response?.data || err.message);
-    return res.status(500).json({ message: "Verification failed" });
+    console.error("Google auth error:", err?.message || err);
+    return res.status(500).json({ message: "Google OAuth failed" });
   }
 });
 
-// Standard Login
+// standard email and password login flow
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -73,7 +82,7 @@ router.post("/login", async (req, res) => {
   }
 });
 
-// Register
+// standard registration flow
 router.post("/register", async (req, res) => {
   try {
     const { username, email, password } = req.body;

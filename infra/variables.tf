@@ -2,8 +2,9 @@
 # Terraform Variables
 # ===========================
 # No Variable with sensitive data
-# Values gets fetched from Enviroment Variables
-# direnv loads them automatically from .envrc
+# Values must be provided via terraform.tfvars, TF_VAR_*,
+# or CI secrets. Do NOT rely on .envrc in production.
+
 
 variable "aws_region" {
   type        = string

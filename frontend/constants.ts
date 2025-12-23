@@ -1,6 +1,6 @@
 import type { Survey } from './types';
 
-// Resolve backend URL from config.js (prod) or fallback to localhost (dev)
+// getting the backend url from the config object I injected, or falling back to localhost for dev work
 function resolveApiBase() {
     // @ts-ignore
     const injected = (window as any).STATWOX_API_URL;
@@ -20,4 +20,5 @@ function resolveApiBase() {
 export const API_BASE_URL = resolveApiBase();
 
 // @ts-ignore
-export const GOOGLE_CLIENT_ID = window.STATWOX_GOOGLE_CLIENT_ID || process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+export const GOOGLE_CLIENT_ID =
+    (window as any).STATWOX_GOOGLE_CLIENT_ID || '';

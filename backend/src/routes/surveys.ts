@@ -13,11 +13,11 @@ import { getAnalytics } from "../controllers/analytics.js";
 
 const router = Router();
 
-// Public Routes
+// these routes are open to everyone so they can submit answers
 router.post("/:id/responses", submitResponse);
-router.get("/:id", getSurvey); // Public for viewing
+router.get("/:id", getSurvey); // letting anyone view the survey without logging in
 
-// Protected Routes
+// locking down these routes so only logged-in users can manage surveys
 router.use(requireAuth);
 
 router.post("/", createSurvey);

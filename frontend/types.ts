@@ -1,6 +1,5 @@
 
-// BACKEND NOTE: These types define the shape of the data your frontend expects.
-// When you build your database, your API responses should match these structures.
+// these are the types that match what my backend api returns so the frontend knows what to expect
 
 export type View = 'surveys' | 'feed' | 'profile' | 'builder' | 'responder' | 'analytics';
 
@@ -10,8 +9,7 @@ export type HomeFeedTab = 'featured' | 'trending' | 'quickPolls';
 
 export type SurveyCategory = 'survey' | 'form' | 'poll';
 
-// This is the main Survey object.
-// In your database, this will likely be a 'Surveys' table.
+// this matches my main survey database table structure
 export type Survey = {
     id: string;
     title: string;
@@ -23,8 +21,7 @@ export type Survey = {
 
 export type QuestionType = 'shortText' | 'longText' | 'multipleChoice' | 'rating' | 'date' | 'email' | 'phoneNumber' | 'yesNo';
 
-// This defines a single question structure.
-// You might store this as a JSON blob inside the Survey table, or a separate 'Questions' table.
+// structure for a single question, likely stored as json within the survey
 export interface Question {
     id: string;
     type: QuestionType;
@@ -34,7 +31,7 @@ export interface Question {
     options?: string[]; // For multiple choice questions
 }
 
-// This is the object used when creating a NEW survey.
+// used this specifically when I'm creating a brand new survey draft
 export interface SurveyDraft {
     id: string;
     category: SurveyCategory;
@@ -43,7 +40,7 @@ export interface SurveyDraft {
     questions: Question[];
 }
 
-// Notification system structure.
+// simplified structure for my notification system
 export interface Notification {
     id: string;
     title: string;

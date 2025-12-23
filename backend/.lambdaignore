@@ -1,5 +1,4 @@
-node_modules/.prisma/client/libquery_engine*
-node_modules/.prisma/client/libquery_engine*
+
 node_modules/aws-sdk
 prisma/migrations
 src

@@ -8,19 +8,19 @@ import { EyeIcon } from './icons/EyeIcon';
 import { EyeOffIcon } from './icons/EyeOffIcon';
 import { API_BASE_URL, GOOGLE_CLIENT_ID } from '../constants';
 
-// props: just need a success callback
+// just need a callback to let the parent know when login succeeds
 interface LoginProps {
     onLoginSuccess: (token: string) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
-    // login vs signup mode
+    // switching between login and signup forms
     const [isLogin, setIsLogin] = useState(true);
 
     // phone vs email mode
     const [isPhoneLogin, setIsPhoneLogin] = useState(false);
 
-    // form state
+    // keeping track of all my input fields here
     const [formData, setFormData] = useState({ username: '', email: '', password: '', confirmPassword: '', phone: '', otp: '' });
 
     // toggle password visibility
@@ -44,8 +44,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    // init google login button
-    // runs when switching modes
+    // initializing the google sign-in button whenever the mode changes
     React.useEffect(() => {
         const initGoogle = () => {
             // @ts-ignore
@@ -73,10 +72,10 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
     }, [isPhoneLogin]);
 
-    // google login success handler
+    // handling the response when google sign-in completes
     const handleGoogleCallback = async (response: any) => {
         try {
-            // verify token with backend
+            // verifying the google token with my backend to complete the login
             const res = await fetch(`${API_BASE_URL}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -95,7 +94,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    // phone login handler
+    // handling the phone login submission
     const handlePhoneSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -133,7 +132,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    // email/pass handler
+    // handling standard email and password submission
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // phone mode? use other handler
@@ -150,7 +149,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             return;
         }
 
-        // login or register endpoint
+        // choosing the right endpoint based on whether we are logging in or signing up
         const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
         const payload = isLogin
             ? { email: formData.email, password: formData.password }
@@ -185,7 +184,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         }
     };
 
-    // input styles
+    // shared styles for my input fields
     const inputClasses = "mt-1 block w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-sm placeholder-gray-400 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-3.5 transition duration-200 ease-in-out hover:shadow-md";
     const labelClasses = "block text-sm font-bold text-gray-700 dark:text-gray-300 mb-1 ml-1";
 
@@ -210,7 +209,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         <Logo size="xxl" className="transform hover:scale-105 transition-transform duration-300" />
                     </div>
 
-                    {/* animated header */}
+                    {/* header text triggers animation on change */}
                     <AnimatePresence mode="wait">
                         <motion.h2
                             key={isPhoneLogin ? 'phone' : (isLogin ? 'login' : 'register')}
@@ -223,7 +222,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                         </motion.h2>
                     </AnimatePresence>
 
-                    {/* error/success msgs */}
+                    {/* displaying feedback messages to the user */}
                     <AnimatePresence>
                         {error && (
                             <motion.div
@@ -248,7 +247,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                     </AnimatePresence>
 
                     <form className="space-y-5" onSubmit={handleSubmit}>
-                        {/* form switching animation */}
+                        {/* animating the transition between form modes */}
                         <AnimatePresence mode="wait">
                             <motion.div
                                 key={isPhoneLogin ? 'phone-form' : (isLogin ? 'login-form' : 'register-form')}
@@ -371,7 +370,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                             </motion.div>
                         </AnimatePresence>
 
-                        {/* main action button */}
+                        {/* the primary button for submitting the form */}
                         <motion.button
                             whileHover={{ scale: 1.02, translateY: -2 }}
                             whileTap={{ scale: 0.98 }}
