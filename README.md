@@ -30,18 +30,93 @@
 
 <br/>
 
-StatWoX is a modern open source forms and surveys platform.  
-Think Google Forms for usability, Typeform for presentation, and a clean serverless backend designed for developers.
+**StatWoX is an open-source platform for forms, surveys, and polls that connects data collection directly to analysis and decision-making.**
 
-It allows you to create surveys, share them instantly, collect responses, analyze insights, and export data.
+Most tools stop at collecting responses.
+Real teams struggle after that.
 
-Simple concept. Focused execution.
+They collect data in one tool, analyze it elsewhere, visualize it in another place, and export results manually. Context is lost. Work is repeated. Insights arrive late.
+
+StatWoX removes this entire gap.
 
 ---
 
-## Visit StatWoX Surveys (Work In Progress)
+## How StatWoX Works (End-to-End)
 
-Link available in the repository description.
+```mermaid
+flowchart LR
+    A[Create Survey / Form / Poll]
+    B[Share Link · Embed · QR · Email]
+    C[Collect Responses]
+    D[Live Tracking]
+    E[Advanced Analytics]
+    F[Analytics Dashboard]
+    G[Export or Decide]
+
+    A --> B --> C --> D --> E --> F --> G
+```
+
+---
+
+## Why StatWoX Is Different
+
+```mermaid
+flowchart TB
+    subgraph Traditional Tools
+        T1[Form Builder]
+        T2[CSV Export]
+        T3[External Analysis Tool]
+        T4[Manual Charts]
+        T5[Decision]
+
+        T1 --> T2 --> T3 --> T4 --> T5
+    end
+
+    subgraph StatWoX
+        S1[Data Collection]
+        S2[Live Signals]
+        S3[Filters & Comparisons]
+        S4[Contextual Dashboard]
+        S5[Export or Action]
+
+        S1 --> S2 --> S3 --> S4 --> S5
+    end
+```
+
+---
+
+## Built for Real Data Work
+
+```mermaid
+flowchart LR
+    Q[Structured Questions]
+    R[Usable Data]
+    A[Filtered Analysis]
+    C[Comparisons · Time Views]
+    I[Insights]
+    O[Exports]
+
+    Q --> R --> A --> C --> I --> O
+```
+
+---
+
+## Designed for Developers and Decision Makers
+
+```mermaid
+flowchart LR
+    D1[Developer First]
+    D2[Open Source]
+    D3[Serverless & Scalable]
+    D4[MVP to Production]
+
+    D1 --> D2 --> D3 --> D4
+```
+
+---
+
+**StatWoX is not just a form builder.**
+**It is an insight pipeline.**
 
 ---
 
@@ -474,3 +549,4 @@ Commit format implies clear intent.
 *   **Fix**: Resolved Prisma binary compatibility for AWS Lambda (Amazon Linux 2).
 
 [Back to Top](#table-of-contents)
+
