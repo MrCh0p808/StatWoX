@@ -262,6 +262,130 @@ flowchart TB
     end
 ```
 
+### Beta Release Architecture
+```mermaid
+---
+config:
+  theme: dark
+  layout: dagre
+---
+flowchart LR
+ subgraph User["User"]
+        U1["Anonymous Respondent"]
+        U2["Authenticated User"]
+  end
+ subgraph UI["Frontend UI (React)"]
+        UI1["Auth Screens<br>Login · Signup · Google Auth"]
+        UI2["Survey Builder<br>Questions · Logic · Validation"]
+        UI3["Responder View<br>Public Survey Form"]
+        UI4["Analytics Dashboard<br>Charts · Filters · Time Views"]
+        UI5["Feed Page<br>Featured · Trending · Polls"]
+        UI6["Notifications Panel"]
+        UI7["Profile Page"]
+        UI8["Settings<br>Account · Security"]
+        UI9["Export UI<br>PDF · Excel · PPT · Images"]
+  end
+ subgraph FE["Frontend Logic"]
+        FE1["Auth State & JWT Storage"]
+        FE2["API Client Layer"]
+        FE3["Analytics State & Filters"]
+        FE4["Notification Polling"]
+        FE5["Export Configuration"]
+  end
+ subgraph API["API Gateway"]
+        APIGW["HTTP API Gateway"]
+  end
+ subgraph Routes["Backend Routes"]
+        R1["Auth Routes"]
+        R2["Survey Routes"]
+        R3["Response Routes"]
+        R4["Analytics Routes"]
+        R5["Feed Routes"]
+        R6["Notification Routes"]
+        R7["Profile Routes"]
+        R8["Settings Routes"]
+        R9["Export Routes"]
+        R10["Health Routes"]
+  end
+ subgraph Controllers["Controllers"]
+        C1["Auth Controller"]
+        C2["Survey Controller"]
+        C3["Response Controller"]
+        C4["Analytics Controller"]
+        C5["Feed Controller"]
+        C6["Notification Controller"]
+        C7["Profile Controller"]
+        C8["Settings Controller"]
+        C9["Export Controller"]
+  end
+ subgraph Services["Services"]
+        S1["Survey Service"]
+        S2["Response Service"]
+        S3["Analytics Service"]
+        S4["Feed Service"]
+        S5["Notification Service"]
+        S6["Profile Service"]
+        S7["Settings Service"]
+        S8["Export Service"]
+  end
+ subgraph Data["Data Layer"]
+        ORM["Prisma ORM"]
+        DB["PostgreSQL<br>Aurora Serverless"]
+  end
+ subgraph Infra["AWS Infrastructure"]
+        L1["AWS Lambda<br>Node.js 20"]
+        VPC["VPC & Subnets"]
+        IAM["IAM Roles"]
+  end
+ subgraph Ops["Monitoring & Ops"]
+        M1["CloudWatch Logs"]
+        M2["Lambda Error Alarms"]
+        M3["Health Check Endpoint"]
+  end
+    U1 --> UI3
+    U2 --> UI1 & UI2 & UI4 & UI5 & UI6 & UI7 & UI8 & UI9
+    UI1 --> FE1
+    UI2 --> FE2
+    UI3 --> FE2
+    UI4 --> FE3
+    UI6 --> FE4
+    UI9 --> FE5
+    FE2 --> APIGW
+    FE3 --> APIGW
+    FE4 --> APIGW
+    FE5 --> APIGW
+    APIGW --> R1 & R2 & R3 & R4 & R5 & R6 & R7 & R8 & R9 & R10 & L1
+    R1 --> C1
+    R2 --> C2
+    R3 --> C3
+    R4 --> C4
+    R5 --> C5
+    R6 --> C6
+    R7 --> C7
+    R8 --> C8
+    R9 --> C9
+    C2 --> S1
+    C3 --> S2
+    C4 --> S3
+    C5 --> S4
+    C6 --> S5
+    C7 --> S6
+    C8 --> S7
+    C9 --> S8
+    S1 --> ORM
+    S2 --> ORM
+    S3 --> ORM
+    S4 --> ORM
+    S5 --> ORM
+    S6 --> ORM
+    S7 --> ORM
+    S8 --> ORM
+    ORM --> DB
+    L1 --> ORM & IAM & VPC & M1 & M2
+    DB --> VPC
+    R10 --> M3
+```
+
 </details>
 
 [Back to Top](#table-of-contents)
@@ -549,4 +673,5 @@ Commit format implies clear intent.
 *   **Fix**: Resolved Prisma binary compatibility for AWS Lambda (Amazon Linux 2).
 
 [Back to Top](#table-of-contents)
+
 
