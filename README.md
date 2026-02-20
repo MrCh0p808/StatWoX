@@ -1,7 +1,5 @@
 <div align="center">
-  <img src="public/logo.png" width="100" alt="StatWoX Icon"/>
-  <br/>
-  <h1>StatWoX</h1>
+  <img src="public/logo.png" width="800" alt="StatWoX Icon"/>
 </div>
 
 <div align="center">
