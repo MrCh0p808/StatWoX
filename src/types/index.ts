@@ -1,7 +1,6 @@
 /**
- * Shared TypeScript Type Definitions for StatWoX (TQ-001)
- *
- * P2 Enterprise Expansion — full type coverage for 40+ features.
+ * Global Types Dictionary (TQ-001)
+ * Locking down interfaces for the Phase 2 expansion. No implicit 'any' allowed here.
  */
 
 // ─── Navigation ───────────────────────────────────────────

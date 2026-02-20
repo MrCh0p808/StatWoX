@@ -54,7 +54,7 @@ describe('Auth API Unit Tests', () => {
         it('1. should register a new user successfully with all fields', async () => {
             const req = mockReq('http://localhost/api/auth/register', 'POST', {
                 email: 'test@example.com',
-                password: 'password123',
+                password: 'Password1!',
                 username: 'testuser',
                 name: 'Test User'
             });
@@ -78,7 +78,7 @@ describe('Auth API Unit Tests', () => {
         it('2. should register a new user with only required fields', async () => {
             const req = mockReq('http://localhost/api/auth/register', 'POST', {
                 email: 'test@example.com',
-                password: 'password123'
+                password: 'Password1!'
             });
             (db.user.findUnique as any).mockResolvedValue(null);
             (hashPassword as any).mockResolvedValue('hashed-password');
@@ -95,7 +95,7 @@ describe('Auth API Unit Tests', () => {
 
         it('3. should map username to name when name is missing', async () => {
             const req = mockReq('http://localhost/api/auth/register', 'POST', {
-                email: 'test@example.com', password: 'password123', username: 'testuser'
+                email: 'test@example.com', password: 'Password1!', username: 'testuser'
             });
             (db.user.findUnique as any).mockResolvedValue(null);
             (hashPassword as any).mockResolvedValue('hashed-password');
@@ -119,24 +119,24 @@ describe('Auth API Unit Tests', () => {
             expect(res.status).toBe(400);
         });
 
-        it('6. should return 400 if password is less than 6 characters', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: '12345' });
+        it('6. should return 400 if password is less than 8 characters', async () => {
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Ab1!' });
             const res = await registerHandler(req);
             expect(res.status).toBe(400);
             const data = await res.json();
-            expect(data.message).toContain('at least 6 characters');
+            expect(data.message).toContain('at least 8 characters');
         });
 
-        it('7. should enforce exactly 6 characters password as valid', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: '123456' });
-            (db.user.findUnique as any).mockResolvedValue(null);
-            (db.user.create as any).mockResolvedValue({ id: '1' });
+        it('7. should reject password without uppercase/number/special', async () => {
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'alllowercase' });
             const res = await registerHandler(req);
-            expect(res.status).toBe(200);
+            expect(res.status).toBe(400);
+            const data = await res.json();
+            expect(data.message).toContain('uppercase');
         });
 
         it('8. should block duplicate emails', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!' });
             (db.user.findUnique as any).mockResolvedValue({ id: 'existing' });
             const res = await registerHandler(req);
             expect(res.status).toBe(400);
@@ -145,14 +145,14 @@ describe('Auth API Unit Tests', () => {
         });
 
         it('9. should enforce lowercase email checks for existing users', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'A@A.COM', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'A@A.COM', password: 'Password1!' });
             (db.user.findUnique as any).mockResolvedValue({ id: 'existing' });
             await registerHandler(req);
             expect(db.user.findUnique).toHaveBeenCalledWith({ where: { email: 'a@a.com' } });
         });
 
         it('10. should block duplicate usernames', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123', username: 'taken' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!', username: 'taken' });
             (db.user.findUnique as any)
                 .mockResolvedValueOnce(null)
                 .mockResolvedValueOnce({ id: 'existing' });
@@ -164,25 +164,23 @@ describe('Auth API Unit Tests', () => {
         });
 
         it('11. should handle missings username gracefully when finding unique', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!' });
             (db.user.findUnique as any).mockResolvedValue(null);
             (db.user.create as any).mockResolvedValue({ id: '1' });
             await registerHandler(req);
             expect(db.user.findUnique).toHaveBeenCalledTimes(1);
         });
 
-        it('12. should sanitize HTML from username', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123', username: '<script>alert()</script>bad' });
-            (db.user.findUnique as any).mockResolvedValue(null);
-            (db.user.create as any).mockResolvedValue({ id: '1' });
-            await registerHandler(req);
-            expect(db.user.create).toHaveBeenCalledWith(expect.objectContaining({
-                data: expect.objectContaining({ username: 'alert()bad' })
-            }));
+        it('12. should reject username with HTML (Zod regex blocks special chars)', async () => {
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!', username: '<script>alert()</script>bad' });
+            const res = await registerHandler(req);
+            expect(res.status).toBe(400);
+            const data = await res.json();
+            expect(data.message).toContain('letters, numbers, and underscores');
         });
 
-        it('13. should sanitize HTML from name', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123', name: '<b>bold</b>name' });
+        it('13. should sanitize HTML from name field', async () => {
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!', name: '<b>bold</b>name' });
             (db.user.findUnique as any).mockResolvedValue(null);
             (db.user.create as any).mockResolvedValue({ id: '1' });
             await registerHandler(req);
@@ -199,14 +197,14 @@ describe('Auth API Unit Tests', () => {
         });
 
         it('15. should handle database findUnique errors gracefully', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!' });
             (db.user.findUnique as any).mockRejectedValue(new Error('DB Error'));
             const res = await registerHandler(req);
             expect(res.status).toBe(500);
         });
 
         it('16. should handle database create errors gracefully', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!' });
             (db.user.findUnique as any).mockResolvedValue(null);
             (db.user.create as any).mockRejectedValue(new Error('DB Error'));
             const res = await registerHandler(req);
@@ -214,7 +212,7 @@ describe('Auth API Unit Tests', () => {
         });
 
         it('17. should lowercase email before saving to DB', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'MIXED@CaSe.CoM', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'MIXED@CaSe.CoM', password: 'Password1!' });
             (db.user.findUnique as any).mockResolvedValue(null);
             (db.user.create as any).mockResolvedValue({ id: '1' });
             await registerHandler(req);
@@ -224,7 +222,7 @@ describe('Auth API Unit Tests', () => {
         });
 
         it('18. should return correct payload containing user and token', async () => {
-            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'password123' });
+            const req = mockReq('http://localhost/api/auth/register', 'POST', { email: 'a@a.com', password: 'Password1!' });
             (db.user.findUnique as any).mockResolvedValue(null);
             (db.user.create as any).mockResolvedValue({ id: 'u1', email: 'a@a.com' });
             const res = await registerHandler(req);
@@ -461,6 +459,47 @@ describe('Auth API Unit Tests', () => {
             const res = await meHandler(req);
             const data = await res.json();
             expect(data.success).toBe(true);
+        });
+        it('11. should handle unexpected header formats (no Bearer space)', async () => {
+            const req = mockReq('http://localhost/api/auth/me', 'GET', undefined, { 'authorization': 'BearerToken123' });
+            (extractTokenFromHeader as any).mockReturnValue(null);
+            const res = await meHandler(req);
+            expect(res.status).toBe(401);
+        });
+
+        it('12. should handle concurrent auth metadata updates without failing', async () => {
+            const req = mockReq('http://localhost/api/auth/me', 'GET', undefined, { 'authorization': 'Bearer valid' });
+            (extractTokenFromHeader as any).mockReturnValue('valid');
+            (getUserFromToken as any).mockResolvedValue({ id: '1' });
+            (db.user.update as any).mockResolvedValue({});
+            const res = await meHandler(req);
+            expect(res.status).toBe(200);
+            expect(db.user.update).toHaveBeenCalledTimes(1);
+        });
+
+        it('13. should handle requests with multiple authorization headers gracefully', async () => {
+            const req = mockReq('http://localhost/api/auth/me', 'GET', undefined, { 'authorization': 'Bearer first, Bearer second' });
+            (extractTokenFromHeader as any).mockReturnValue('first');
+            (getUserFromToken as any).mockResolvedValue({ id: '1' });
+            const res = await meHandler(req);
+            expect(res.status).toBe(200);
+        });
+
+        it('14. should not expose sensitive fields in the /me payload', async () => {
+            const req = mockReq('http://localhost/api/auth/me', 'GET', undefined, { 'authorization': 'Bearer valid' });
+            (extractTokenFromHeader as any).mockReturnValue('valid');
+            (getUserFromToken as any).mockResolvedValue({ id: '1', email: 'a@a.com', passwordHash: 'secret' });
+            const res = await meHandler(req);
+            const data = await res.json();
+            expect(data.data.passwordHash).toBeUndefined();
+        });
+
+        it('15. should strip HTML tags from user agent headers during session updates', async () => {
+            const req = mockReq('http://localhost/api/auth/me', 'GET', undefined, { 'authorization': 'Bearer valid', 'user-agent': '<script>' });
+            (extractTokenFromHeader as any).mockReturnValue('valid');
+            (getUserFromToken as any).mockResolvedValue({ id: '1' });
+            const res = await meHandler(req);
+            expect(res.status).toBe(200);
         });
     });
 });

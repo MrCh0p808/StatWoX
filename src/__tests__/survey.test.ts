@@ -5,12 +5,18 @@ import { PATCH as publishSurvey } from '@/app/api/surveys/[id]/publish/route';
 import { POST as respondToSurvey } from '@/app/api/surveys/[id]/respond/route';
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
-import { extractTokenFromHeader, getUserFromToken, hashPassword } from '@/lib/auth';
+import { extractTokenFromHeader, getUserFromToken, hashPassword, comparePassword } from '@/lib/auth';
 
 // Mock DB and Auth
 vi.mock('@/lib/db', () => ({
     db: {
-        $transaction: vi.fn((promises) => Promise.all(promises)),
+        $transaction: vi.fn((fnOrPromises: any) => {
+            // Support both callback and batch transaction modes
+            if (typeof fnOrPromises === 'function') {
+                return fnOrPromises(db);
+            }
+            return Promise.all(fnOrPromises);
+        }),
         survey: {
             findMany: vi.fn(),
             count: vi.fn().mockResolvedValue(1),
@@ -30,6 +36,7 @@ vi.mock('@/lib/auth', () => ({
     getUserFromToken: vi.fn(),
     extractTokenFromHeader: vi.fn(),
     hashPassword: vi.fn((pw) => Promise.resolve(`hashed-${pw}`)),
+    comparePassword: vi.fn(async (plain: string, hash: string) => plain === hash || hash === `hashed-${plain}`),
 }));
 
 function mockReq(url: string, method: string, body?: any, headers: Record<string, string> = {}) {
@@ -483,17 +490,19 @@ describe('Survey API Unit Tests', () => {
 
         it('50. Rejects wrong password if set (401)', async () => {
             const req = mockReq('http://localhost', 'POST', { answers: [], password: 'wrong' });
-            (db.survey.findUnique as any).mockResolvedValue({ status: 'published', password: 'correct' });
+            (db.survey.findUnique as any).mockResolvedValue({ status: 'published', password: 'hashed-correct', questions: [{ id: 'q1', required: true }] });
+            (comparePassword as any).mockResolvedValue(false);
             const res = await respondToSurvey(req, mockParams('1'));
             expect(res.status).toBe(401);
         });
 
         it('51. Accepts correct password if set', async () => {
-            const req = mockReq('http://localhost', 'POST', { answers: [{ questionId: 'q1', value: 'a' }], password: 'correct' });
+            const req = mockReq('http://localhost', 'POST', { answers: [{ questionId: 'q1', value: 'a' }], password: 'correctpw' });
             (db.survey.findUnique as any).mockResolvedValue({
-                status: 'published', password: 'correct', allowAnon: true,
+                status: 'published', password: 'hashed-correctpw', allowAnon: true,
                 questions: [{ id: 'q1', required: true }]
             });
+            (comparePassword as any).mockResolvedValue(true);
             const res = await respondToSurvey(req, mockParams('1'));
             expect(res.status).toBe(200);
         });
@@ -527,11 +536,12 @@ describe('Survey API Unit Tests', () => {
         });
 
         it('56. Rejects response with missing answers for required questions (400)', async () => {
+            // Our validation now catches empty arrays first with "Answers array is required and must not be empty"
             const req = mockReq('http://localhost', 'POST', { answers: [] });
             const res = await respondToSurvey(req, mockParams('1'));
             expect(res.status).toBe(400);
             const data = await res.json();
-            expect(data.message).toContain('Missing answer');
+            expect(data.message).toContain('Answers array is required');
         });
 
         it('57. Creates response with valid answers', async () => {
@@ -539,7 +549,7 @@ describe('Survey API Unit Tests', () => {
             const res = await respondToSurvey(req, mockParams('1'));
             expect(res.status).toBe(200);
             expect(db.response.create).toHaveBeenCalledWith(expect.objectContaining({
-                data: expect.objectContaining({ surveyId: '1', answers: { create: [{ questionId: 'q1', value: 'val' }] } })
+                data: expect.objectContaining({ surveyId: '1', answers: { create: [expect.objectContaining({ questionId: 'q1', value: 'val' })] } })
             }));
         });
 

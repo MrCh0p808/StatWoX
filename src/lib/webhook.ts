@@ -1,6 +1,6 @@
 /**
- * Webhook utility — fires POST requests to configured webhook URLs
- * with HMAC-SHA256 signature verification.
+ * Webhooks dispatcher - Fires payloads to external URLs.
+ * Signs everything with HMAC-SHA256 so receivers can verify it's us.
  */
 import { createHmac } from 'crypto';
 

@@ -1,6 +1,6 @@
 /**
- * Skip Logic Engine — evaluates conditional branching rules
- * to determine which questions are visible based on current answers.
+ * Skip Logic Engine - Evaluates conditional branching.
+ * Tells the UI what questions to show based on previous answers.
  */
 import type { SkipLogicRule } from '@/types';
 

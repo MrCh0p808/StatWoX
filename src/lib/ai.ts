@@ -1,10 +1,7 @@
 /**
- * AI Utility — ZhiPu GLM-5 integration (free tier)
- * 
- * Uses the OpenAI-compatible API endpoint provided by ZhiPu AI.
- * GLM-5 is free-tier and supports chat completions.
- * 
- * Set ZHIPU_API_KEY in .env to enable AI features.
+ * AI Wrapper - Hooks up to ZhiPu GLM-5 API.
+ * Uses the free-tier model (glm-4-flash) so we don't burn cash.
+ * Requires ZHIPU_API_KEY in .env.
  */
 
 const ZHIPU_BASE_URL = 'https://open.bigmodel.cn/api/paas/v4';
@@ -63,7 +60,19 @@ export async function generateQuestions(
     count: number = 5,
     types: string[] = ['multipleChoice', 'shortText', 'rating']
 ): Promise<any[]> {
-    const prompt = `Generate ${count} survey questions about "${topic}" for ${targetAudience} audience.
+    // SEC-006: Input length limits to prevent prompt injection
+    if (topic.length > 500) {
+        throw new Error('Topic description must be 500 characters or fewer');
+    }
+    if (targetAudience.length > 100) {
+        throw new Error('Target audience must be 100 characters or fewer');
+    }
+    count = Math.min(Math.max(1, count), 20); // Cap between 1-20
+
+    const safeTopic = topic.replace(/[<>{}]/g, ''); // Strip dangerous chars
+    const safeAudience = targetAudience.replace(/[<>{}]/g, '');
+
+    const prompt = `Generate ${count} survey questions about "${safeTopic}" for ${safeAudience} audience.
 
 Return ONLY a valid JSON array. Each question object must have:
 - "title": string (the question text)
@@ -98,15 +107,15 @@ export async function generateSummary(
     questionBreakdowns: { title: string; type: string; distribution: Record<string, number> }[]
 ): Promise<{ summary: string; keyFindings: string[]; recommendations: string[] }> {
     const dataDescription = questionBreakdowns.map(q =>
-        `Question: "${q.title}" (${q.type})\nResponses: ${JSON.stringify(q.distribution)}`
+        `Question: "${q.title}"(${q.type}) \nResponses: ${JSON.stringify(q.distribution)} `
     ).join('\n\n');
 
     const prompt = `Analyze these survey results for "${surveyTitle}" and provide insights.
 
-${dataDescription}
+        ${dataDescription}
 
 Return ONLY valid JSON with this structure:
-{"summary":"2-3 sentence overview","keyFindings":["finding1","finding2","finding3"],"recommendations":["rec1","rec2"]}`;
+    { "summary": "2-3 sentence overview", "keyFindings": ["finding1", "finding2", "finding3"], "recommendations": ["rec1", "rec2"] } `;
 
     const response = await chatCompletion([
         { role: 'system', content: 'You are a data analyst. Always respond with valid JSON only.' },
@@ -138,12 +147,12 @@ export async function analyzeSentiment(
 
     // Batch texts (max 20 at a time for token efficiency)
     const batch = texts.slice(0, 20);
-    const prompt = `Classify each text as positive, negative, or neutral. Return ONLY a JSON array of sentiments.
+    const prompt = `Classify each text as positive, negative, or neutral.Return ONLY a JSON array of sentiments.
 
-Texts:
+        Texts:
 ${batch.map((t, i) => `${i + 1}. "${t}"`).join('\n')}
 
-Return format: ["positive","negative","neutral",...]`;
+Return format: ["positive", "negative", "neutral", ...]`;
 
     const response = await chatCompletion([
         { role: 'system', content: 'You are a sentiment classifier. Respond only with a JSON array of strings.' },
@@ -182,7 +191,7 @@ export async function generateFollowUp(
     answer: string
 ): Promise<{ title: string; type: string } | null> {
     const prompt = `The user answered "${answer}" to the question "${questionTitle}".
-Generate ONE clarifying follow-up question. Return ONLY JSON: {"title":"...","type":"shortText"}`;
+Generate ONE clarifying follow - up question.Return ONLY JSON: { "title": "...", "type": "shortText" } `;
 
     try {
         const response = await chatCompletion([

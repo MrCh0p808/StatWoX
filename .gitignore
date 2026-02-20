@@ -47,6 +47,10 @@ dist/
 # Jugaad backup & venv
 .jugaad_venv/
 .JugaadBKP/
+jugaad_portable.py
+
+# Lock file - using bun.lock exclusively
+package-lock.json
 
 # Terraform
 terraform/

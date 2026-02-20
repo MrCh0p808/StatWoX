@@ -30,10 +30,22 @@ export async function GET(
             );
         }
 
-        await db.survey.update({
-            where: { id },
-            data: { viewCount: { increment: 1 } }
-        });
+        // Bug #16 fix: Only increment viewCount for non-owner viewers
+        const authHeader = request.headers.get('authorization');
+        const viewerToken = extractTokenFromHeader(authHeader);
+        let isOwner = false;
+        if (viewerToken) {
+            const viewer = await getUserFromToken(viewerToken);
+            if (viewer && viewer.id === survey.authorId) {
+                isOwner = true;
+            }
+        }
+        if (!isOwner) {
+            await db.survey.update({
+                where: { id },
+                data: { viewCount: { increment: 1 } }
+            });
+        }
 
         return NextResponse.json({
             success: true,
@@ -116,7 +128,34 @@ export async function PATCH(
         if (body.theme !== undefined) (updateData as any).theme = body.theme;
         if (body.locale !== undefined) (updateData as any).locale = body.locale;
         if (body.translations !== undefined) (updateData as any).translations = body.translations;
-        if (body.webhookUrl !== undefined) (updateData as any).webhookUrl = body.webhookUrl?.trim() || null;
+        if (body.webhookUrl !== undefined) {
+            const wUrl = body.webhookUrl?.trim() || null;
+            if (wUrl) {
+                try {
+                    const parsed = new URL(wUrl);
+                    if (!['http:', 'https:'].includes(parsed.protocol)) {
+                        return NextResponse.json(
+                            { success: false, message: 'Webhook URL must use http or https protocol' },
+                            { status: 400 }
+                        );
+                    }
+                    // SSRF: Block localhost / private IPs
+                    const host = parsed.hostname;
+                    if (['localhost', '127.0.0.1', '0.0.0.0', '::1'].includes(host) || host.startsWith('10.') || host.startsWith('192.168.') || host.startsWith('172.')) {
+                        return NextResponse.json(
+                            { success: false, message: 'Webhook URL cannot target private/local addresses' },
+                            { status: 400 }
+                        );
+                    }
+                } catch {
+                    return NextResponse.json(
+                        { success: false, message: 'Invalid webhook URL format' },
+                        { status: 400 }
+                    );
+                }
+            }
+            (updateData as any).webhookUrl = wUrl;
+        }
         if (body.webhookSecret !== undefined) (updateData as any).webhookSecret = body.webhookSecret?.trim() || null;
         if (body.ipAllowlist !== undefined) (updateData as any).ipAllowlist = body.ipAllowlist;
         if (body.paymentRequired !== undefined) (updateData as any).paymentRequired = body.paymentRequired;

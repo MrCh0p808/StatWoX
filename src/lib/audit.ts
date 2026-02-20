@@ -1,6 +1,6 @@
 /**
- * Audit Logger — records all mutations for compliance tracking.
- * Free-tier: stores directly in PostgreSQL via Prisma.
+ * Audit Logger - Tracks DB mutations for compliance.
+ * Cheap & cheerful: dumps straight to Postgres under the free tier.
  */
 import { db } from '@/lib/db';
 

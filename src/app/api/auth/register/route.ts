@@ -2,8 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { hashPassword, signToken } from '@/lib/auth';
 import { stripHtml } from '@/lib/sanitize';
-
+import { z } from 'zod';
 import { ratelimit } from '@/lib/ratelimit';
+
+const registerSchema = z.object({
+    email: z.string().email('Invalid email address'),
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters')
+        .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+        .regex(/[0-9]/, 'Password must contain at least one number')
+        .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+    username: z.string()
+        .min(3, 'Username must be at least 3 characters')
+        .max(30, 'Username must be at most 30 characters')
+        .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
+        .optional(),
+    name: z.string().max(100).optional(),
+});
 
 export async function POST(request: NextRequest) {
     try {
@@ -18,21 +33,16 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { email, password, username, name } = body;
 
-        if (!email || !password) {
+        const result = registerSchema.safeParse(body);
+        if (!result.success) {
             return NextResponse.json(
-                { success: false, message: 'Email and password are required' },
+                { success: false, message: result.error.issues[0].message },
                 { status: 400 }
             );
         }
 
-        if (password.length < 6) {
-            return NextResponse.json(
-                { success: false, message: 'Password must be at least 6 characters' },
-                { status: 400 }
-            );
-        }
+        const { email, password, username, name } = result.data;
 
         const existingUser = await db.user.findUnique({
             where: { email: email.toLowerCase() }

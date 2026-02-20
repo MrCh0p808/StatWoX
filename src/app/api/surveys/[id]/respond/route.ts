@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { extractTokenFromHeader, getUserFromToken } from '@/lib/auth';
+import { extractTokenFromHeader, getUserFromToken, comparePassword } from '@/lib/auth';
 import { fireWebhook } from '@/lib/webhook';
 import { logAudit } from '@/lib/audit';
 
@@ -48,7 +48,7 @@ export async function POST(
 
         if (survey.password) {
             const { password } = body;
-            if (password !== survey.password) {
+            if (!password || !(await comparePassword(password, survey.password))) {
                 return NextResponse.json(
                     { success: false, message: 'Incorrect password' },
                     { status: 401 }
@@ -64,7 +64,19 @@ export async function POST(
         ).split(',')[0].trim();
 
         if (survey.ipAllowlist && Array.isArray(survey.ipAllowlist) && (survey.ipAllowlist as string[]).length > 0) {
-            const allowed = (survey.ipAllowlist as string[]).some(cidr => ip.startsWith(cidr.replace(/\/\d+$/, '')));
+            const allowed = (survey.ipAllowlist as string[]).some(cidr => {
+                // Proper CIDR matching: extract network and prefix length
+                const [network, prefixStr] = cidr.split('/');
+                if (!prefixStr) return ip === network; // Exact match if no CIDR notation
+                const prefix = parseInt(prefixStr, 10);
+                const ipParts = ip.split('.').map(Number);
+                const netParts = network.split('.').map(Number);
+                if (ipParts.length !== 4 || netParts.length !== 4) return false;
+                const ipNum = (ipParts[0] << 24) | (ipParts[1] << 16) | (ipParts[2] << 8) | ipParts[3];
+                const netNum = (netParts[0] << 24) | (netParts[1] << 16) | (netParts[2] << 8) | netParts[3];
+                const mask = prefix === 0 ? 0 : (~0 << (32 - prefix));
+                return (ipNum & mask) === (netNum & mask);
+            });
             if (!allowed) {
                 return NextResponse.json(
                     { success: false, message: 'Access denied: IP not allowed' },
@@ -104,12 +116,20 @@ export async function POST(
             }
         }
 
+        // Validate answers payload
+        if (!answers || !Array.isArray(answers) || answers.length === 0) {
+            return NextResponse.json(
+                { success: false, message: 'Answers array is required and must not be empty' },
+                { status: 400 }
+            );
+        }
+
         // Validate all questionIds belong to this survey
         const validQuestionIds = new Set(
             survey.questions.map((q: { id: string }) => q.id)
         );
         for (const answer of answers as { questionId: string; value: string }[]) {
-            if (!validQuestionIds.has(answer.questionId)) {
+            if (!answer.questionId || !validQuestionIds.has(answer.questionId)) {
                 return NextResponse.json(
                     { success: false, message: `Invalid questionId: ${answer.questionId}` },
                     { status: 400 }
@@ -153,32 +173,37 @@ export async function POST(
             locale: clientMetadata?.locale || null,
         };
 
-        const response = await db.response.create({
-            data: {
-                surveyId: id,
-                respondentId,
-                isComplete: true,
-                completedAt: new Date(),
-                ipAddress: ip,
-                userAgent,
-                duration,
-                flagged,
-                flagReason,
-                metadata: responseMetadata,
-                answers: {
-                    create: (answers as { questionId: string; value: string; fileUrl?: string; signatureUrl?: string }[]).map((answer) => ({
-                        questionId: answer.questionId,
-                        value: String(answer.value),
-                        fileUrl: answer.fileUrl || null,
-                        signatureUrl: answer.signatureUrl || null,
-                    }))
+        // Bug #17 fix: Wrap response creation + counter increment in a transaction
+        const response = await db.$transaction(async (tx: Parameters<Parameters<typeof db.$transaction>[0]>[0]) => {
+            const newResponse = await tx.response.create({
+                data: {
+                    surveyId: id,
+                    respondentId,
+                    isComplete: true,
+                    completedAt: new Date(),
+                    ipAddress: ip,
+                    userAgent,
+                    duration,
+                    flagged,
+                    flagReason,
+                    metadata: responseMetadata,
+                    answers: {
+                        create: (answers as { questionId: string; value: string; fileUrl?: string; signatureUrl?: string }[]).map((answer) => ({
+                            questionId: answer.questionId,
+                            value: String(answer.value),
+                            fileUrl: answer.fileUrl || null,
+                            signatureUrl: answer.signatureUrl || null,
+                        }))
+                    }
                 }
-            }
-        });
+            });
 
-        await db.survey.update({
-            where: { id },
-            data: { responseCount: { increment: 1 } }
+            await tx.survey.update({
+                where: { id },
+                data: { responseCount: { increment: 1 } }
+            });
+
+            return newResponse;
         });
 
         // Fire webhook if configured (non-blocking)

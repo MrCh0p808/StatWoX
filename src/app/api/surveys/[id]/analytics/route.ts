@@ -78,17 +78,23 @@ export async function GET(
             };
 
             if (question.type === 'multipleChoice' && question.options) {
-                const options = (typeof question.options === 'string' ? JSON.parse(question.options) : question.options) as string[];
-                const optionCounts: Record<string, number> = {};
-                options.forEach(opt => optionCounts[opt] = 0);
-                questionAnswers.forEach(a => {
-                    const value = a.value;
-                    if (optionCounts[value] !== undefined) {
-                        optionCounts[value]++;
-                    }
-                });
-                analytics.optionCounts = optionCounts;
-                analytics.options = options;
+                try {
+                    const options = (typeof question.options === 'string' ? JSON.parse(question.options) : question.options) as string[];
+                    const optionCounts: Record<string, number> = {};
+                    options.forEach(opt => optionCounts[opt] = 0);
+                    questionAnswers.forEach(a => {
+                        const value = a.value;
+                        if (optionCounts[value] !== undefined) {
+                            optionCounts[value]++;
+                        }
+                    });
+                    analytics.optionCounts = optionCounts;
+                    analytics.options = options;
+                } catch {
+                    analytics.optionCounts = {};
+                    analytics.options = [];
+                    analytics.parseError = 'Failed to parse question options';
+                }
             }
 
             if (question.type === 'rating') {
@@ -107,7 +113,10 @@ export async function GET(
             }
 
             if (question.type === 'yesNo') {
-                const yesCount = questionAnswers.filter(a => a.value.toLowerCase() === 'true' || a.value.toLowerCase() === 'yes').length;
+                const yesCount = questionAnswers.filter(a => {
+                    const val = String(a.value ?? '').toLowerCase();
+                    return val === 'true' || val === 'yes';
+                }).length;
                 analytics.yesCount = yesCount;
                 analytics.noCount = questionAnswers.length - yesCount;
                 analytics.yesPercentage = questionAnswers.length > 0 ? (yesCount / questionAnswers.length) * 100 : 0;

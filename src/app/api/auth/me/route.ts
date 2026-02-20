@@ -31,9 +31,11 @@ export async function GET(request: NextRequest) {
             }
         });
 
+        const { passwordHash, ...safeUser } = user as any;
+
         return NextResponse.json({
             success: true,
-            data: user
+            data: safeUser
         });
 
     } catch (error) {
