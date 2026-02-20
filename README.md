@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Build-passing-brightgreen" />
   <img src="https://img.shields.io/badge/Version-1.1.0-blue" />
   <img src="https://img.shields.io/badge/PRs-welcome-green" />
-  <img src="https://img.shields.io/badge/Powered_by-CodeSwami_Protocol-orange" />
+  <img src="https://img.shields.io/badge/Powered_by-CoderWa_Protocol-orange" />
   <img src="https://img.shields.io/badge/Phase-3.5_Identity_Engine-teal" />
 
   <br/>
@@ -585,7 +585,7 @@ StatWoX acts as a REST strict platform. Payloads must contain valid JWT `Authori
 
 ## <span id="16-contributing-guide">16. 🤝 Contributing Guide</span>
 
-StatWoX is developed strictly beneath the **CodeSwami Protocol**. PRs should address specific isolated waves from the Master Plan.
+StatWoX is developed strictly beneath the **CoderWa Protocol**. PRs should address specific isolated waves from the Master Plan.
 
 *   `feat/*`: New features
 *   `fix/*`: Bug fixes
