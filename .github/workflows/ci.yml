@@ -1,0 +1,53 @@
+name: StatWoX CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    env:
+      DATABASE_URL: "postgresql://postgres:password@localhost:5432/statwox"
+      JWT_SECRET: "ci-test-secret-key-32-chars-long"
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: statwox
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v1
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Ensure PostgreSQL service is healthy and push schema
+      run: bun run db:push --accept-data-loss
+
+    - name: Generate Prisma Client
+      run: bun run db:generate
+
+    - name: Run tests
+      run: bun run test
+
+    - name: Build Next.js app
+      run: bun run build

@@ -1,0 +1,53 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Build
+.next/
+out/
+dist/
+build/
+
+# Git
+.git/
+.gitignore
+
+# Environment
+.env*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Terraform (don't put in Docker image)
+terraform/
+*.tfstate*
+.terraform/
+
+# Tests
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+jest.config.*
+
+# Docs
+README.md
+TESTING.md
+STATWOX_OVERHAUL_DOCS/
+*.md
+
+# Misc
+.github/
+docker-compose*.yml
+Makefile

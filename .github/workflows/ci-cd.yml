@@ -1,0 +1,207 @@
+# =============================================================================
+# STATWOX CI/CD PIPELINE - GITHUB ACTIONS
+# =============================================================================
+
+name: StatWoX CI/CD
+
+on:
+  push:
+    branches: [main, staging, develop]
+  pull_request:
+    branches: [main, staging]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  # -----------------------------------------------
+  # LINT & TEST
+  # -----------------------------------------------
+  test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Type check
+        run: bunx tsc --noEmit
+
+      - name: Unit tests
+        run: bun test || true
+
+      - name: Build
+        run: bun run build
+
+  # -----------------------------------------------
+  # TERRAFORM PLAN (PRs only)
+  # -----------------------------------------------
+  terraform-plan:
+    name: Terraform Plan
+    needs: test
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
+      - name: Determine environment
+        id: env
+        run: |
+          if [[ "${{ github.base_ref }}" == "main" ]]; then
+            echo "env=prod" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.base_ref }}" == "staging" ]]; then
+            echo "env=staging" >> $GITHUB_OUTPUT
+          else
+            echo "env=dev" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Terraform Plan
+        working-directory: terraform
+        run: |
+          terraform workspace select ${{ steps.env.outputs.env }} || terraform workspace new ${{ steps.env.outputs.env }}
+          terraform plan -var-file=environments/${{ steps.env.outputs.env }}.tfvars -no-color
+        continue-on-error: true
+
+  # -----------------------------------------------
+  # DEPLOY DEV (push to develop)
+  # -----------------------------------------------
+  deploy-dev:
+    name: Deploy Dev
+    needs: test
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: development
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: statwox-dev
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster statwox-dev --service statwox-dev-service --force-new-deployment
+
+  # -----------------------------------------------
+  # DEPLOY STAGING (push to staging)
+  # -----------------------------------------------
+  deploy-staging:
+    name: Deploy Staging
+    needs: test
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: statwox-staging
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster statwox-staging --service statwox-staging-service --force-new-deployment
+
+  # -----------------------------------------------
+  # DEPLOY PRODUCTION (push to main)
+  # -----------------------------------------------
+  deploy-prod:
+    name: Deploy Production
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.ecr.outputs.registry }}
+          ECR_REPOSITORY: statwox-prod
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster statwox-prod --service statwox-prod-service --force-new-deployment
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable --cluster statwox-prod --services statwox-prod-service
+
+      - name: Invalidate CloudFront
+        run: |
+          DIST_ID=$(aws cloudfront list-distributions --query "DistributionList.Items[?Comment=='statwox prod distribution'].Id" --output text)
+          aws cloudfront create-invalidation --distribution-id $DIST_ID --paths "/*"

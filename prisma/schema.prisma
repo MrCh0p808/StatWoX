@@ -1,0 +1,451 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────
+
+enum SurveyStatus {
+  draft
+  published
+  closed
+}
+
+enum SurveyCategory {
+  survey
+  form
+  poll
+  quiz
+}
+
+enum ShareType {
+  public
+  private
+  community
+  link
+}
+
+enum FriendshipStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum WorkspaceRole {
+  owner
+  editor
+  viewer
+}
+
+// ─── User ─────────────────────────────────────────────────
+
+model User {
+  id                String       @id @default(cuid())
+  email             String       @unique
+  emailVerified     DateTime?
+  username          String?      @unique
+  passwordHash      String?
+  phone             String?      @unique
+  phoneVerified     DateTime?
+  name              String?
+  image             String?
+  bio               String?
+  website           String?
+  company           String?
+  coverImage        String?
+  isOnline          Boolean      @default(false)
+  lastSeenAt        DateTime?
+  googleId          String?      @unique
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  lastLoginAt       DateTime?
+  
+  surveys           Survey[]
+  responses         Response[]
+  comments          Comment[]
+  likes             Like[]
+  notifications     Notification[]
+  sentFriendships   Friendship[] @relation("SentFriendships")
+  receivedFriendships Friendship[] @relation("ReceivedFriendships")
+  questionBanks     QuestionBank[]
+  ownedWorkspaces   Workspace[]  @relation("OwnedWorkspaces")
+  workspaceMemberships WorkspaceMember[]
+  
+  @@index([email])
+  @@index([username])
+  @@index([googleId])
+}
+
+// ─── Survey ───────────────────────────────────────────────
+
+model Survey {
+  id                  String       @id @default(cuid())
+  title               String
+  description         String?
+  category            SurveyCategory @default(survey)
+  status              SurveyStatus   @default(draft)
+  isPublic            Boolean        @default(true)
+  shareType           ShareType      @default(public)
+  allowAnon           Boolean      @default(true)
+  mediaType           String?
+  mediaUrl            String?
+  caption             String?
+  maxResponses        Int?
+  closesAt            DateTime?
+  
+  // Display & UX
+  thankYouMessage     String?
+  thankYouLogic       Json?        // Conditional thank-you: [{condition, message, redirectUrl}]
+  redirectUrl         String?
+  showProgress        Boolean      @default(true)
+  showQuestionNumbers Boolean      @default(true)
+  shuffleQuestions    Boolean      @default(false)
+  conversational      Boolean      @default(false)
+  password            String?
+  
+  // Theming
+  theme               Json?        // {primaryColor, bgColor, fontFamily, bgImage, logoUrl}
+  
+  // i18n
+  locale              String?      @default("en")
+  translations        Json?        // {es: {title, description, questions[]}}
+  
+  // Versioning
+  version             Int          @default(1)
+  
+  // Integrations
+  qrCodeUrl           String?
+  webhookUrl          String?
+  webhookSecret       String?
+  customDomain        String?
+  
+  // Payments
+  stripeProductId     String?
+  stripePriceId       String?
+  paymentRequired     Boolean      @default(false)
+  
+  // Access Control
+  ipAllowlist         Json?        // String[] of allowed CIDRs
+  
+  // Counters
+  responseCount       Int          @default(0)
+  viewCount           Int          @default(0)
+  likeCount           Int          @default(0)
+  commentCount        Int          @default(0)
+  
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  publishedAt         DateTime?
+  
+  authorId            String
+  author              User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  workspaceId         String?
+  workspace           Workspace?   @relation(fields: [workspaceId], references: [id])
+  questions           Question[]
+  responses           Response[]
+  comments            Comment[]
+  likes               Like[]
+  versions            SurveyVersion[]
+  scheduledReports    ScheduledReport[]
+  
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([shareType])
+  @@index([workspaceId])
+  @@index([customDomain])
+}
+
+// ─── Question ─────────────────────────────────────────────
+
+model Question {
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  type            String       @default("shortText")
+  options         Json?
+  required        Boolean      @default(false)
+  order           Int          @default(0)
+  page            Int          @default(1)
+  placeholder     String?
+  validation      String?
+  min             Int?
+  max             Int?
+  
+  // Skip Logic
+  logic           Json?        // [{condition, operator, value, targetQuestionId}]
+  
+  // File Upload
+  fileUpload      Boolean      @default(false)
+  fileTypes       String?      // Allowed MIME types (comma-separated)
+  maxFileSize     Int?         // Max file size in KB
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  surveyId        String
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  answers         Answer[]
+  
+  @@index([surveyId])
+}
+
+// ─── Response ─────────────────────────────────────────────
+
+model Response {
+  id              String       @id @default(cuid())
+  isComplete      Boolean      @default(false)
+  startedAt       DateTime     @default(now())
+  completedAt     DateTime?
+  ipAddress       String?
+  userAgent       String?
+  
+  // P2 Additions
+  metadata        Json?        // {geolocation, deviceType, completionPath[], locale}
+  duration        Int?         // Time to complete in seconds
+  flagged         Boolean      @default(false)
+  flagReason      String?
+  
+  surveyId        String
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  respondentId    String?
+  respondent      User?        @relation(fields: [respondentId], references: [id])
+  answers         Answer[]
+  
+  @@index([surveyId])
+  @@index([respondentId])
+  @@index([flagged])
+}
+
+// ─── Answer ───────────────────────────────────────────────
+
+model Answer {
+  id              String       @id @default(cuid())
+  value           String
+  fileUrl         String?      // For file upload questions
+  signatureUrl    String?      // For signature capture
+  createdAt       DateTime     @default(now())
+  
+  questionId      String
+  question        Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  responseId      String
+  response        Response     @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  
+  @@index([questionId])
+  @@index([responseId])
+}
+
+// ─── Comment ──────────────────────────────────────────────
+
+model Comment {
+  id              String       @id @default(cuid())
+  content         String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  authorId        String
+  author          User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  surveyId        String
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  parentId        String?
+  parent          Comment?     @relation("CommentReplies", fields: [parentId], references: [id])
+  replies         Comment[]    @relation("CommentReplies")
+  
+  @@index([authorId])
+  @@index([surveyId])
+}
+
+// ─── Like ─────────────────────────────────────────────────
+
+model Like {
+  id              String       @id @default(cuid())
+  createdAt       DateTime     @default(now())
+  
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  surveyId        String
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, surveyId])
+  @@index([userId])
+  @@index([surveyId])
+}
+
+// ─── Notification ─────────────────────────────────────────
+
+model Notification {
+  id              String       @id @default(cuid())
+  type            String
+  title           String
+  message         String
+  entityType      String?
+  entityId        String?
+  read            Boolean      @default(false)
+  readAt          DateTime?
+  createdAt       DateTime     @default(now())
+  
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([read])
+}
+
+// ─── Friendship ───────────────────────────────────────────
+
+model Friendship {
+  id              String       @id @default(cuid())
+  status          FriendshipStatus @default(pending)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  requesterId     String
+  requester       User         @relation("SentFriendships", fields: [requesterId], references: [id], onDelete: Cascade)
+  receiverId      String
+  receiver        User         @relation("ReceivedFriendships", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  @@unique([requesterId, receiverId])
+  @@index([requesterId])
+  @@index([receiverId])
+}
+
+// ─── OTP ──────────────────────────────────────────────────
+
+model OTP {
+  id              String       @id @default(cuid())
+  phone           String
+  code            String
+  verified        Boolean      @default(false)
+  expiresAt       DateTime
+  createdAt       DateTime     @default(now())
+  
+  @@index([phone])
+}
+
+// ─── P2: Workspace & RBAC ─────────────────────────────────
+
+model Workspace {
+  id              String       @id @default(cuid())
+  name            String
+  slug            String       @unique
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  ownerId         String
+  owner           User         @relation("OwnedWorkspaces", fields: [ownerId], references: [id], onDelete: Cascade)
+  members         WorkspaceMember[]
+  surveys         Survey[]
+  
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id              String       @id @default(cuid())
+  role            WorkspaceRole @default(viewer)
+  createdAt       DateTime     @default(now())
+  
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId     String
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, workspaceId])
+  @@index([userId])
+  @@index([workspaceId])
+}
+
+// ─── P2: Audit Logs ───────────────────────────────────────
+
+model AuditLog {
+  id              String       @id @default(cuid())
+  action          String       // create, update, delete, publish, export
+  entityType      String       // survey, question, response, workspace
+  entityId        String
+  userId          String
+  metadata        Json?
+  ipAddress       String?
+  createdAt       DateTime     @default(now())
+  
+  @@index([userId])
+  @@index([entityId])
+  @@index([entityType])
+  @@index([createdAt])
+}
+
+// ─── P2: Question Bank ────────────────────────────────────
+
+model QuestionBank {
+  id              String       @id @default(cuid())
+  title           String
+  description     String?
+  type            String       @default("shortText")
+  options         Json?
+  tags            String[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+// ─── P2: Survey Versioning ────────────────────────────────
+
+model SurveyVersion {
+  id              String       @id @default(cuid())
+  version         Int
+  snapshot        Json         // Complete survey + questions snapshot
+  changeNote      String?
+  createdAt       DateTime     @default(now())
+  
+  surveyId        String
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  authorId        String
+  
+  @@index([surveyId])
+  @@index([authorId])
+}
+
+// ─── P2: Template Marketplace ─────────────────────────────
+
+model Template {
+  id              String       @id @default(cuid())
+  name            String
+  description     String?
+  category        String       // nps, rsvp, feedback, satisfaction, quiz
+  snapshot        Json         // Complete survey structure for cloning
+  isPublic        Boolean      @default(true)
+  usageCount      Int          @default(0)
+  tags            String[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  authorId        String
+  
+  @@index([category])
+  @@index([authorId])
+}
+
+// ─── P2: Scheduled Reports ────────────────────────────────
+
+model ScheduledReport {
+  id              String       @id @default(cuid())
+  recipientEmail  String
+  frequency       String       // daily, weekly, monthly
+  format          String       @default("pdf")
+  lastSentAt      DateTime?
+  nextSendAt      DateTime
+  active          Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  
+  surveyId        String
+  survey          Survey       @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  
+  @@index([nextSendAt])
+  @@index([surveyId])
+}
