@@ -71,7 +71,7 @@ resource "aws_s3_object" "frontend_dist" {
     ManagedBy   = "Terraform"
     Project     = "statwox"
     Environment = "prod"
-    Owner       = "v3nd377a_7ecorp"
+    Owner       = "V3ND377A 5Y573M5"
     CostCenter  = "FreeTier"
   }
 }

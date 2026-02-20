@@ -25,7 +25,7 @@
 
   <img src="https://img.shields.io/badge/License-MIT-purple" />
   <br/>
-  <img src="https://img.shields.io/badge/Made_by-V3nd377a_73C0rp-black" />
+  <img src="https://img.shields.io/badge/Made_by-V3ND377A_5Y573M5-black" />
 </div>
 
 <br/>

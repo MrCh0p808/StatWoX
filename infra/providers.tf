@@ -25,7 +25,7 @@ provider "aws" {
       Project     = var.project
       Environment = "prod"
       ManagedBy   = "Terraform"
-      Owner       = "v3nd377a_7ecorp"
+      Owner       = "V3ND377A 5Y573M5"
       CostCenter  = "FreeTier"
     }
   }
@@ -40,7 +40,7 @@ provider "aws" {
       Project     = var.project
       Environment = "prod"
       ManagedBy   = "Terraform"
-      Owner       = "v3nd377a_7ecorp"
+      Owner       = "V3ND377A 5Y573M5"
       CostCenter  = "FreeTier"
     }
   }
